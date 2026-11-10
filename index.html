@@ -1,0 +1,2635 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>雨雲ブレンド</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="雨雲ブレンド">
+<meta name="theme-color" content="#fff4f7">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+/* Layout: one soft column of rounded cards — header+search, rain hero, now, 3-hourly, today/tomorrow, moon sky-map, air, folded details. */
+:root{
+  --bg:#fff4f7; --panel:#ffffff; --panel2:#fdeef3; --fg:#4a3550; --muted:#8c7891; --line:#f3dbe4;
+  --pink:#f27ea9; --lav:#a593ee; --mint:#5fc4a6; --sky:#7cbcf0; --butter:#ffcb57;
+  --accent:#e8679a; --onaccent:#ffffff;
+  --sun:#ffb938; --cloud:#b9b3c9; --rainc:#5aa9ec; --snow:#9ccbea; --bolt:#ffcf3a;
+  --moonlit:#ffe08a; --moondark:#e9e2f2; --night:#3e3a63;
+  --dry:#f6e8ee;
+  --r1:#a0d2ff; --r5:#218cff; --r10:#0041ff; --r20:#d9c400; --r30:#ff9900; --r50:#ff2800; --r80:#b40068;
+  --ok:#3fa886; --warn:#d9861c; --bad:#e2505b;
+  --shadow:0 6px 18px rgba(214,120,160,.13);
+  --font-cute:"Hachi Maru Pop","Zen Maru Gothic","Hiragino Maru Gothic ProN",system-ui,sans-serif;
+  --font-body:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1e1a2e; --panel:#2a2440; --panel2:#332c4d; --fg:#f4ebf6; --muted:#b4a6c2; --line:#3f3659;
+  --accent:#ff8fb8; --onaccent:#2a2440; --cloud:#8f88a6; --moondark:#3f3659; --night:#151227; --dry:#3a3252;
+  --shadow:0 6px 18px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1e1a2e; --panel:#2a2440; --panel2:#332c4d; --fg:#f4ebf6; --muted:#b4a6c2; --line:#3f3659;
+  --accent:#ff8fb8; --onaccent:#2a2440; --cloud:#8f88a6; --moondark:#3f3659; --night:#151227; --dry:#3a3252;
+  --shadow:0 6px 18px rgba(0,0,0,.25); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 var(--font-body);font-weight:500}
+.wrap{max-width:680px;margin:0 auto;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:14px}
+.wrap>*{min-width:0}
+header{display:flex;align-items:center;gap:10px}
+header svg{width:44px;height:44px;flex:none}
+h1{font-family:var(--font-cute);font-weight:400;font-size:1.6rem;margin:0;line-height:1.2;color:var(--accent)}
+.place{font-size:.9rem;color:var(--muted)}
+.place b{color:var(--fg);font-size:1rem}
+.search{display:flex;gap:8px}
+.search input{flex:1;min-width:0}
+input,button{font:inherit;font-size:16px;color:var(--fg);background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:8px 14px}
+button{cursor:pointer;background:var(--accent);color:var(--onaccent);border-color:var(--accent);font-weight:700;white-space:nowrap}
+button.ghost{background:var(--panel);color:var(--fg);border-color:var(--line)}
+:focus-visible{outline:3px solid var(--lav);outline-offset:2px}
+.cands{display:flex;flex-wrap:wrap;gap:6px;font-size:.85rem;color:var(--muted)}
+.cands:empty{display:none}
+.cands button{font-size:.85rem;padding:3px 12px;background:var(--panel);color:var(--fg);border-color:var(--line);font-weight:500}
+.cands button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:700}
+.card{background:var(--panel);border-radius:22px;padding:16px 18px;box-shadow:var(--shadow)}
+.card h2{font-size:.85rem;font-weight:700;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:6px}
+.card h2::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--tag,var(--pink))}
+
+/* hero */
+.hero{display:grid;gap:10px;background:linear-gradient(160deg,var(--panel) 55%,var(--panel2))}
+.hero-top{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.hero-top svg{width:76px;height:76px}
+.verdict{font-family:var(--font-cute);font-size:1.35rem;line-height:1.35;text-wrap:balance}
+.vsub{font-size:.88rem;color:var(--muted)}
+.strip{display:grid;grid-template-columns:repeat(13,1fr);gap:6px;height:64px;align-items:end;margin-top:4px}
+.bar{border-radius:10px 10px 4px 4px;min-height:6px;background:var(--dry)}
+.bar.now{box-shadow:0 0 0 2px var(--accent)}
+.ticks{display:grid;grid-template-columns:repeat(13,1fr);gap:6px;font-size:.72rem;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.ticks span{white-space:nowrap;overflow:visible}
+.ticks span.nowt{color:var(--accent);font-weight:700}
+.bar.past{opacity:.55}
+.strip{gap:3px} .ticks{gap:3px}
+.stripcap{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted)}
+
+/* now */
+.nowline{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.nowline .wx{display:flex;align-items:center;gap:6px;font-size:1.15rem;font-weight:700;margin-right:6px}
+.nowline .wx svg{width:36px;height:36px}
+.pill{background:var(--panel2);border-radius:999px;padding:2px 12px;font-size:.85rem;font-variant-numeric:tabular-nums}
+.tip{font-size:.85rem;color:var(--muted);margin-top:6px}
+
+/* hours */
+.hours{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(68px,1fr);gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.hr{display:grid;gap:0;justify-items:center;text-align:center;font-size:.8rem;padding:8px 2px;border-radius:16px;background:var(--panel2)}
+.hr .t{font-size:.75rem;color:var(--muted)}
+.hr svg{width:34px;height:34px}
+.hr .w{font-weight:700;font-size:.78rem;line-height:1.3}
+.hr .tp{font-size:.95rem;font-weight:700}
+.hr .h{color:var(--muted);font-size:.7rem;line-height:1.4}
+
+/* days */
+.days{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.day{display:grid;gap:2px;align-content:start}
+.day .dl{font-size:.8rem;color:var(--muted)}
+.day .wx{display:flex;align-items:center;gap:6px;font-size:1.05rem;font-weight:700}
+.day .wx svg{width:40px;height:40px;flex:none}
+.day .tp{font-variant-numeric:tabular-nums;font-size:.95rem}
+.hi{color:var(--bad)} .lo{color:var(--rainc)}
+.day dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0 0;font-size:.82rem}
+.day dt{color:var(--muted)} .day dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* moon */
+.moonwrap{display:grid;grid-template-columns:170px 1fr;gap:16px;align-items:center}
+@media (max-width:480px){.moonwrap{grid-template-columns:1fr;justify-items:center}.moonwrap .minfo{justify-self:stretch}}
+.skymap{width:170px;height:170px;max-width:100%}
+.mhead{display:flex;align-items:center;gap:10px}
+.mhead svg{width:44px;height:44px;flex:none}
+.mname{font-family:var(--font-cute);font-size:1.2rem;line-height:1.3}
+.mstate{margin:8px 0 4px;padding:8px 12px;border-radius:14px;background:var(--panel2);font-weight:700}
+.mstate.good{color:var(--ok)} .mstate.maybe{color:var(--warn)} .mstate.no{color:var(--muted)}
+.minfo dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0 0;font-size:.85rem}
+.minfo dt{color:var(--muted)} .minfo dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* air */
+.air .lv{font-family:var(--font-cute);font-size:1.15rem}
+.air .sm{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.meter{height:10px;border-radius:999px;background:var(--dry);position:relative;margin:8px 0 2px;overflow:hidden}
+.meter i{position:absolute;inset:0 auto 0 0;border-radius:999px}
+.scale{display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted)}
+
+/* details */
+details.more{background:var(--panel);border-radius:22px;padding:12px 18px;box-shadow:var(--shadow);font-size:.85rem}
+details.more summary{cursor:pointer;font-weight:700;color:var(--muted)}
+details.more[open] summary{margin-bottom:10px}
+.inner{display:grid;gap:12px}
+.tbl-box{overflow-x:auto;border:2px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-size:.8rem;font-variant-numeric:tabular-nums}
+th,td{padding:5px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:700;color:var(--muted);font-size:.72rem}
+.src{font-size:.8rem;color:var(--muted);display:grid;gap:3px}
+.src b{color:var(--fg)}
+.src .ok::before{content:"● ";color:var(--ok)} .src .ng::before{content:"● ";color:var(--bad)}
+.setgrid{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.setgrid input{width:8em}
+.setgrid input#yid{width:100%;max-width:24em}
+.note{font-size:.76rem;color:var(--muted);line-height:1.75;margin:0}
+a{color:var(--accent)}
+
+/* favorites & history */
+.favs{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fav{display:inline-flex;align-items:center;border:2px solid var(--line);border-radius:999px;background:var(--panel);overflow:hidden;max-width:100%}
+.fav button{background:none;border:0;color:var(--fg);font-weight:700;font-size:.88rem;padding:5px 4px 5px 12px;border-radius:0;max-width:12em;overflow:hidden;text-overflow:ellipsis}
+.fav button.x{padding:5px 10px 5px 6px;color:var(--muted);font-weight:500}
+.fav.on{border-color:var(--accent);background:var(--panel2)}
+.fav.on button:first-child{color:var(--accent)}
+.addfav{font-size:.85rem;padding:5px 12px;background:var(--panel);color:var(--accent);border:2px dashed var(--pink)}
+.favmsg{font-size:.8rem;color:var(--muted)}
+details.hist{font-size:.85rem;color:var(--muted)}
+details.hist summary{cursor:pointer;font-weight:700}
+.histlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.histlist button{font-size:.82rem;padding:3px 12px;background:var(--panel);color:var(--fg);border-color:var(--line);font-weight:500}
+.histlist button.clear{color:var(--muted);border-style:dashed}
+
+/* announcement */
+.announce{border-radius:22px;padding:14px 18px;background:linear-gradient(120deg,var(--lav),var(--pink));color:#fff;box-shadow:var(--shadow);display:grid;gap:2px}
+.announce .tag{font-size:.75rem;font-weight:700;letter-spacing:.06em;opacity:.9}
+.announce .ttl{font-family:var(--font-cute);font-size:1.2rem;line-height:1.35;text-wrap:balance}
+.announce .nt{font-size:.85rem;opacity:.95}
+
+/* topics */
+.topics{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.topics li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start}
+.topics .ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:700;color:#fff}
+.topics b{display:block;font-size:.95rem}
+.topics span{font-size:.84rem;color:var(--muted)}
+
+/* calendar */
+.cal{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.cal li{display:grid;grid-template-columns:3.2em 1fr;gap:10px;align-items:baseline;padding:6px 10px;border-radius:14px}
+.cal li.today{background:var(--panel2);outline:2px solid var(--pink)}
+.cal li.past{opacity:.5}
+.cal .dd{font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+.cal .ev b{font-weight:700}
+.cal .ev small{display:block;color:var(--muted);font-size:.8rem}
+.kind{display:inline-block;font-size:.68rem;padding:0 7px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:1px}
+
+/* moon altitude chart */
+.mchart{margin-top:12px}
+.mchart svg{width:100%;height:auto;display:block}
+.mchart .cap{font-size:.8rem;color:var(--muted);margin-top:4px}
+
+/* thunder alert */
+.thunder{border-radius:22px;padding:12px 18px;background:#3e2a63;color:#fff4b8;box-shadow:var(--shadow);display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.thunder svg{width:40px;height:40px}
+.thunder b{display:block;font-family:var(--font-cute);font-weight:400;font-size:1.15rem;color:#fff}
+.thunder span{font-size:.85rem}
+/* observed now */
+.obs-big{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.obs-big .tmp{font-size:2.2rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.obs-big .feel{font-size:.9rem;color:var(--muted)}
+.obs-big svg{width:52px;height:52px}
+.obs-src{font-size:.75rem;color:var(--muted);margin-top:6px}
+.wind{display:inline-flex;align-items:center;gap:4px}
+.wind svg{width:14px;height:14px}
+/* past 30 min */
+.past{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pc{display:grid;gap:0;justify-items:center;text-align:center;font-size:.8rem;padding:8px 2px;border-radius:16px;background:var(--panel2)}
+.pc.latest{outline:2px solid var(--pink)}
+.pc .t{font-size:.75rem;color:var(--muted)}
+.pc svg{width:32px;height:32px}
+.pc .w{font-weight:700;font-size:.78rem}
+.pc .tp{font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums}
+.pc .h{color:var(--muted);font-size:.7rem;line-height:1.45;font-variant-numeric:tabular-nums}
+
+/* wind map */
+.windmap{position:relative;border-radius:16px;overflow:hidden;background:var(--panel2);aspect-ratio:1/1;max-width:100%}
+.windmap canvas{width:100%;height:100%;display:block}
+.windmap .attr{position:absolute;right:6px;bottom:4px;font-size:.62rem;background:rgba(255,255,255,.8);color:#4a3550;padding:0 6px;border-radius:6px}
+.windmap .attr a{color:#4a3550}
+.windmap .wstatus{position:absolute;inset:0;display:grid;place-items:center;font-size:.85rem;color:var(--muted)}
+.wlegend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.72rem;color:var(--muted);margin-top:8px;align-items:center}
+.wlegend i{display:inline-block;width:18px;height:4px;border-radius:2px;margin-right:4px;vertical-align:2px}
+.wlegend .obsk{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid #fff;background:var(--fg);margin-right:4px;vertical-align:-1px;box-shadow:0 0 0 1px var(--fg)}
+
+/* hero supplement */
+.hint{display:none;margin-top:6px;padding:8px 12px;border-radius:14px;background:#fff1cc;color:#6b4a12;font-size:.86rem;font-weight:700}
+.hint.on{display:block}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hint{background:#4a3d1c;color:#ffe08a}}
+:root[data-theme="dark"] .hint{background:#4a3d1c;color:#ffe08a}
+/* generic */
+.lead{font-family:var(--font-cute);font-size:1.12rem;line-height:1.4;text-wrap:balance}
+.lead.warn{color:var(--warn)} .lead.bad{color:var(--bad)} .lead.ok{color:var(--ok)}
+.sub2{font-size:.84rem;color:var(--muted);margin-top:2px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:8px 0 0;font-size:.84rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-variant-numeric:tabular-nums}
+.spark svg{width:100%;height:auto;display:block;margin-top:8px}
+.note2{font-size:.74rem;color:var(--muted);margin-top:6px}
+/* bike */
+.bikebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-top:8px}
+.bikebar select{font:inherit;font-size:16px;color:var(--fg);background:var(--panel2);border:2px solid var(--line);border-radius:999px;padding:4px 10px}
+.bikerow{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;margin-top:8px}
+.bikerow i{height:14px;border-radius:4px;background:var(--dry)}
+.bikerow i.ride{outline:2px solid var(--accent);outline-offset:-2px}
+.bikecap{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted)}
+/* confidence */
+.conf{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.cf{display:grid;justify-items:center;gap:2px;text-align:center;padding:8px 2px;border-radius:14px;background:var(--panel2);font-size:.72rem}
+.cf .t{color:var(--muted)}
+.cf .dot2{width:16px;height:16px;border-radius:50%}
+.cf b{font-size:.78rem}
+.cf .h{color:var(--muted);line-height:1.35}
+@media (max-width:480px){.conf{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+
+/* family */
+.fam{display:grid;gap:12px}
+.fm{border-radius:18px;background:var(--panel2);padding:12px 14px;display:grid;gap:6px}
+.fm-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.fm-head b{font-size:1.02rem}
+.fm-head span{font-size:.82rem;color:var(--muted)}
+.fm-head button{margin-left:auto;font-size:.75rem;padding:2px 10px;background:var(--panel);color:var(--muted);border-color:var(--line);font-weight:500}
+.fm-wx{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem}
+.fm-wx svg{width:28px;height:28px}
+.fm-talk{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.fm-talk li{display:grid;grid-template-columns:18px 1fr;gap:6px;font-size:.9rem;line-height:1.5}
+.fm-talk li::before{content:"";width:12px;height:12px;margin-top:5px;border-radius:50%;background:var(--pink)}
+.fm-add{display:grid;gap:8px;margin-top:4px}
+.fm-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) auto;gap:8px;align-items:center}
+.fm-row input{width:100%;min-width:0}
+.fm-row button{padding-left:14px;padding-right:14px}
+.fm .pill{background:var(--panel)}
+.fm-msg{font-size:.82rem;color:var(--muted)}
+.fm-cands{display:flex;flex-wrap:wrap;gap:6px}
+.fm-cands button{font-size:.82rem;padding:3px 12px;background:var(--panel);color:var(--fg);border-color:var(--line);font-weight:500}
+
+/* air quality */
+.aq-items{display:grid;gap:10px;margin-top:10px}
+.aq{display:grid;grid-template-columns:7.2em 1fr;gap:4px 10px;align-items:center}
+.aq .nm{font-weight:700;font-size:.88rem;line-height:1.3}
+.aq .nm small{display:block;font-weight:500;color:var(--muted);font-size:.7rem}
+.aq .vals{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:.8rem;font-variant-numeric:tabular-nums}
+.aq .lvchip{font-size:.72rem;font-weight:700;color:#fff;border-radius:999px;padding:0 8px}
+.aq .meter{grid-column:2;margin:0}
+.aqstrip{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin-top:12px}
+.aqstrip i{height:14px;border-radius:4px}
+.aqcap{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted)}
+.advice{list-style:none;margin:12px 0 0;padding:12px 14px;border-radius:16px;background:var(--panel2);display:grid;gap:6px}
+.advice li{display:grid;grid-template-columns:20px 1fr;gap:6px;font-size:.9rem;line-height:1.5}
+.advice li::before{content:"";width:14px;height:14px;margin-top:4px;border-radius:5px;background:var(--mint)}
+.aqopt{display:flex;gap:8px;align-items:center;font-size:.82rem;color:var(--muted);margin-top:10px}
+.aqopt input{width:20px;height:20px;accent-color:var(--accent);padding:0}
+
+/* official warnings */
+.warnbox{border-radius:22px;padding:14px 18px;box-shadow:var(--shadow);display:grid;gap:8px;background:var(--panel);border:3px solid var(--warn)}
+.warnbox.lv-red{border-color:#d7263d} .warnbox.lv-purple{border-color:#7b2fbf} .warnbox.lv-black{border-color:#111;background:#1b1b1b;color:#fff}
+.warnbox .wt{font-family:var(--font-cute);font-size:1.15rem;line-height:1.35}
+.warnbox .wlist{display:flex;flex-wrap:wrap;gap:6px}
+.wchip{font-size:.82rem;font-weight:700;border-radius:999px;padding:2px 12px;color:#fff}
+.wchip.adv{background:#f2c200;color:#3d2d00} .wchip.warn{background:#d7263d} .wchip.l4{background:#7b2fbf} .wchip.l5{background:#111;border:1px solid #fff}
+.warnbox .wn{font-size:.84rem;line-height:1.55}
+.warnbox a{color:inherit}
+/* official forecast */
+.ofc-days{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ofc-day{background:var(--panel2);border-radius:16px;padding:10px 12px;display:grid;gap:4px;min-width:0}
+.ofc-day .dl{font-size:.78rem;color:var(--muted)}
+.ofc-day .tx{font-weight:700;font-size:.9rem;line-height:1.45}
+.pops{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;font-size:.66rem;text-align:center}
+.pops span{background:var(--panel);border-radius:8px;padding:2px 0;font-variant-numeric:tabular-nums}
+.pops span b{display:block;font-size:.85rem}
+.week{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(64px,1fr);gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:4px}
+.wk{display:grid;justify-items:center;gap:1px;padding:8px 2px;border-radius:14px;background:var(--panel2);font-size:.75rem;text-align:center}
+.wk svg{width:30px;height:30px}
+.wk .t{color:var(--muted)}
+.wk .tp{font-variant-numeric:tabular-nums;font-weight:700}
+.rel{font-size:.68rem;font-weight:700;border-radius:999px;padding:0 8px;color:#fff}
+.rel.A{background:var(--ok)} .rel.B{background:var(--sky)} .rel.C{background:var(--warn)}
+/* ensemble */
+.ens{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-top:10px}
+@media (max-width:480px){.ens{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.eb{display:grid;justify-items:center;gap:2px;padding:8px 2px;border-radius:14px;background:var(--panel2);font-size:.72rem;text-align:center}
+.eb .t{color:var(--muted);line-height:1.3}
+.eb .p{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+.eb .bar2{width:70%;height:6px;border-radius:3px;background:var(--dry);overflow:hidden}
+.eb .bar2 i{display:block;height:100%;background:var(--rainc)}
+.eb .j{color:var(--muted);font-variant-numeric:tabular-nums}
+/* umbrella slots */
+.uslots{display:grid;gap:8px}
+.us{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:var(--panel2)}
+.us svg{width:40px;height:40px}
+.us b{display:block;font-size:.95rem}
+.us span{font-size:.8rem;color:var(--muted)}
+.us .verdict2{font-family:var(--font-cute);font-size:1rem;line-height:1.3}
+.us button{font-size:.72rem;padding:2px 10px;background:var(--panel);color:var(--muted);border-color:var(--line);font-weight:500}
+.uadd{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;margin-top:8px;font-size:.9rem;color:var(--muted)}
+.uadd input{width:100%;min-width:0;max-width:100%;padding:8px 12px;box-sizing:border-box}
+.uadd input#uLabel,.uadd button{grid-column:1/-1}
+/* iOS Safari gives time inputs a fixed minimum width; strip the native look so they fit their column */
+.uadd input[type="time"]{-webkit-appearance:none;appearance:none;display:block;text-align:center;min-height:42px;line-height:1.2}
+.uadd input[type="time"]::-webkit-date-and-time-value{text-align:center;margin:0}
+.uadd .tilde{text-align:center}
+/* verification */
+.vt{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:8px;font-variant-numeric:tabular-nums}
+.vt th,.vt td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.vt th:first-child,.vt td:first-child{text-align:left}
+.vt th{color:var(--muted);font-weight:700;font-size:.72rem}
+.vt tr.best td{color:var(--ok);font-weight:700}
+
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.hero-top svg{animation:bob 3.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.hero-top svg{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="17" cy="17" r="8" fill="var(--sun)"/><path d="M15 38H35A8 8 0 0 0 35 22A11 11 0 0 0 14 20A9 9 0 0 0 15 38Z" fill="var(--panel)" stroke="var(--pink)" stroke-width="2.5"/><circle cx="21" cy="30" r="1.3" fill="var(--fg)"/><circle cx="29" cy="30" r="1.3" fill="var(--fg)"/><path d="M23.5 33q1.5 1.5 3 0" stroke="var(--fg)" stroke-width="1.3" fill="none" stroke-linecap="round"/><circle cx="18.5" cy="32.5" r="1.6" fill="var(--pink)" opacity=".45"/><circle cx="31.5" cy="32.5" r="1.6" fill="var(--pink)" opacity=".45"/></svg>
+    <div>
+      <h1>雨雲ブレンド</h1>
+      <div class="place" id="place"></div>
+    </div>
+  </header>
+
+  <div class="favs" id="favs"></div>
+
+  <form class="search" id="searchForm">
+    <input id="q" type="search" size="1" placeholder="まちの名前(例: 横浜市、渋谷区)" aria-label="市町村名" autocomplete="off" enterkeyhint="search">
+    <button type="submit">さがす</button>
+    <button type="button" id="geo" class="ghost">現在地</button>
+  </form>
+  <div class="cands" id="cands"></div>
+  <details class="hist" id="histBox"><summary>さいきん見た場所</summary><div class="histlist" id="hist"></div></details>
+
+  <section class="warnbox" id="warnbox" hidden></section>
+
+  <section class="thunder" id="thunder" hidden></section>
+
+  <section class="announce" id="announce" hidden></section>
+
+  <section class="card hero" aria-live="polite">
+    <div class="hero-top">
+      <div id="heroIcon"></div>
+      <div>
+        <div class="verdict" id="verdict">お空を見ています…</div>
+        <div class="vsub" id="vmeta"></div>
+        <div class="hint" id="hint"></div>
+      </div>
+    </div>
+    <div class="stripcap"><span>さっきまで(実測)</span><span>これから(予報)</span></div>
+    <div class="strip" id="strip"></div>
+    <div class="ticks" id="ticks"></div>
+  </section>
+
+  <section class="card" style="--tag:var(--accent)"><h2>自転車・おでかけナビ</h2>
+    <div class="lead" id="bikeLead">–</div><div class="sub2" id="bikeSub"></div>
+    <div class="bikecap"><span>いま</span><span>30分後</span><span>60分後</span></div>
+    <div class="bikerow" id="bikeRow"></div>
+    <div class="bikebar"><label for="commute">道のりの時間</label>
+      <select id="commute"><option value="10">10分</option><option value="15">15分</option><option value="20" selected>20分</option><option value="30">30分</option><option value="45">45分</option><option value="60">60分</option></select>
+      <span id="bikeRadar"></span></div>
+  </section>
+
+  <section class="card" style="--tag:var(--pink)"><h2>傘いる?(時間を決めてチェック)</h2>
+    <div class="uslots" id="uslots"></div>
+    <form class="uadd" id="uForm">
+      <input id="uLabel" placeholder="名前(例: 娘の帰り)" maxlength="10" aria-label="時間帯の名前" autocomplete="off">
+      <input id="uFrom" type="time" value="15:00" aria-label="開始時刻"><span class="tilde">〜</span>
+      <input id="uTo" type="time" value="16:00" aria-label="終了時刻">
+      <button type="submit">登録</button>
+    </form>
+    <div class="note2" id="uMsg">登校・通勤・お迎えなど、3つまで登録できます(このiPhoneの中にだけ保存)。</div>
+  </section>
+
+  <section class="card" style="--tag:var(--sky)"><h2>いまの天気(実況)</h2>
+    <div class="obs-big" id="obsBig"></div>
+    <div class="nowline" id="nowLine" style="margin-top:8px">–</div>
+    <div class="tip" id="nowTip"></div>
+    <div class="obs-src" id="obsSrc"></div>
+  </section>
+
+  <section class="card" style="--tag:var(--mint)"><h2>さっきまでの30分</h2><div class="past" id="past"></div><div class="obs-src" id="pastSrc"></div></section>
+
+  <section class="card" style="--tag:var(--sky)"><h2>まわりの風マップ</h2>
+    <div class="windmap"><canvas id="windCanvas" width="1024" height="1024" role="img" aria-label="地図に風の向きと強さを矢印で重ねた図"></canvas>
+      <div class="wstatus" id="windStatus">地図を読み込んでいます…</div>
+      <div class="attr">地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a></div></div>
+    <div class="wlegend" id="wlegend"></div>
+    <div class="obs-src" id="windSrc"></div>
+  </section>
+
+  <section class="card" style="--tag:var(--butter)"><h2>3時間ごとの天気</h2><div class="hours" id="hours"></div></section>
+
+  <section class="card" style="--tag:var(--accent)"><h2 id="ofcTitle">気象庁の予報</h2>
+    <div class="ofc-days" id="ofcDays"></div>
+    <div class="note2" style="margin-top:10px">週間予報(信頼度 A:確度が高い・B:やや高い・C:やや低く変わりやすい)</div>
+    <div class="week" id="ofcWeek"></div>
+    <div class="note2" id="ofcSrc"></div>
+  </section>
+
+  <section class="card" style="--tag:var(--lav)"><h2>予報の自信度(外れやすさ)</h2>
+    <div class="lead" id="confLead">–</div><div class="sub2" id="confSub"></div>
+    <div class="conf" id="conf" style="margin-top:10px"></div>
+    <div class="note2">気象庁・ヨーロッパ・ドイツ・アメリカの4つの予報モデルを比べ、雨かどうかの意見の分かれ具合と気温のばらつきから判定しています。</div>
+  </section>
+
+  <section class="card" style="--tag:var(--sky)"><h2>アンサンブル予報(何十通りもの計算)</h2>
+    <div class="lead" id="ensLead">–</div><div class="sub2" id="ensSub"></div>
+    <div class="ens" id="ensBlocks"></div>
+    <div class="spark" id="ensChart"></div>
+    <div class="note2" id="ensNote">同じ予報を、最初の条件を少しずつ変えて何十通りも計算したものです。「6時間に1mm以上の雨」になった計算の割合を降水確率とし、気象庁の降水確率と並べています。グラフの帯は、8割の計算が収まった気温の幅です。</div>
+  </section>
+
+  <section class="card" style="--tag:var(--mint)"><h2>このアプリの当たり具合(この場所)</h2>
+    <div class="lead" id="verLead">–</div><div class="sub2" id="verSub"></div>
+    <div id="verTable"></div>
+    <div class="note2">自動記録を設定すると、GitHubが1時間ごとに4つのモデルの予報と近くのアメダスの実測を記録・採点し、その成績で雨の予報の重み付けと気温の補正を行います。未設定のときは、アプリを開いたときにiPhoneの中で記録した成績を使います。</div>
+  </section>
+
+  <section class="days" id="days"></section>
+
+  <section class="card" style="--tag:var(--pink)"><h2>おでかけ中の家族を気づかう</h2>
+    <div class="fam" id="fam"></div>
+    <form class="fm-add" id="famForm">
+      <div class="fm-row">
+        <input id="famWho" size="1" placeholder="だれ?(パパなど)" aria-label="家族の呼び名" maxlength="12" autocomplete="off">
+        <input id="famPlace" type="search" size="1" placeholder="行き先の市町村" aria-label="行き先の市町村名" autocomplete="off" enterkeyhint="search">
+        <button type="submit">さがす</button>
+      </div>
+      <div class="fm-cands" id="famCands"></div>
+      <div class="fm-msg" id="famMsg">3件まで登録できます。登録した内容はこのiPhoneの中にだけ保存されます。</div>
+    </form>
+  </section>
+
+  <section class="card" style="--tag:var(--pink)"><h2>気圧と頭痛ナビ</h2>
+    <div class="lead" id="presLead">–</div><div class="sub2" id="presSub"></div>
+    <div class="spark" id="presChart"></div>
+    <div class="note2">気圧の下がり方から出した目安です。体調の変化には個人差があります。つらいときは無理をせず、お医者さんに相談してね。</div>
+  </section>
+
+  <section class="card" style="--tag:var(--sky)"><h2>上空の寒気・気圧の谷(500hPa)</h2>
+    <div class="lead" id="upLead">–</div><div class="sub2" id="upSub"></div>
+    <div class="chips" id="upChips"></div>
+    <div class="spark" id="upChart"></div>
+    <div class="note2" id="upNote"></div>
+  </section>
+
+  <section class="card" style="--tag:var(--sky)"><h2>今日のお空トピックス</h2><ul class="topics" id="todayTopics"></ul></section>
+
+  <section class="card" style="--tag:var(--lav)"><h2>今夜の夜空トピックス</h2><ul class="topics" id="nightTopics"></ul></section>
+
+  <section class="card" style="--tag:var(--lav)">
+    <h2>お月さま</h2>
+    <div class="moonwrap">
+      <div id="skymap"></div>
+      <div class="minfo" id="moon"></div>
+    </div>
+    <div class="mchart" id="moonChart"></div>
+  </section>
+
+  <section class="card" style="--tag:var(--pink)"><h2 id="calTitle">今月のお空カレンダー</h2><ul class="cal" id="cal"></ul></section>
+
+  <section class="card air" style="--tag:var(--mint)"><h2>空気のきれいさ(PM2.5・黄砂・光化学スモッグ)</h2>
+    <div class="lead" id="aqLead">–</div><div class="sub2" id="aqSub"></div>
+    <div class="aq-items" id="aqItems"></div>
+    <div class="note2" style="margin-top:12px">この先24時間の空気(1マス=1時間)</div><div class="aqstrip" id="aqStrip" style="margin-top:4px"></div><div class="aqcap" id="aqCap"></div>
+    <ul class="advice" id="aqAdvice"></ul>
+    <label class="aqopt"><input type="checkbox" id="aqSens" checked> 呼吸器が弱い家族に合わせて、早めに注意を出す</label>
+    <div class="note2">CAMS(ヨーロッパの大気予報、約10km四方の平均)の予測値を使った目安です。花粉は日本向けのデータがないため表示していません。実際の測定値は<a href="https://soramame.env.go.jp/" target="_blank" rel="noopener">環境省 そらまめくん</a>、黄砂は<a href="https://www.data.jma.go.jp/env/kosateller/kosa/" target="_blank" rel="noopener">気象庁 黄砂情報</a>、光化学スモッグ注意報は都道府県の発表で確認してください。</div>
+  </section>
+
+  <details class="more">
+    <summary>くわしいデータと設定</summary>
+    <div class="inner">
+      <div class="tbl-box">
+        <table>
+          <thead><tr><th>時刻</th><th>合成 mm/h</th><th>雨と予想した割合</th><th>ナウキャスト</th><th>Yahoo!</th><th>気象庁MSM</th><th>ECMWF</th><th>ICON</th><th>GFS</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="src" id="src"></div>
+      <div class="setgrid">
+        <input id="yid" aria-label="Yahoo! JAPAN Client ID" placeholder="Yahoo! Client ID(任意)" autocomplete="off" spellcheck="false" autocapitalize="off">
+      </div>
+      <div class="setgrid">
+        <input id="dataKey" type="password" aria-label="自動記録の合言葉" placeholder="自動記録の合言葉(任意)" autocomplete="off" spellcheck="false" autocapitalize="off" style="width:100%;max-width:24em">
+      </div>
+      <div class="setgrid">
+        <input id="lat" aria-label="緯度" placeholder="緯度" inputmode="decimal">
+        <input id="lon" aria-label="経度" placeholder="経度" inputmode="decimal">
+        <button type="button" id="go" class="ghost">この地点で更新</button>
+      </div>
+      <p class="note">
+        雨の予報は、気象庁の高解像度降水ナウキャストとYahoo!の降水予測(どちらも5分間隔のレーダー予測)を中心にし、数値予報モデル(気象庁MSMを2倍の重み)で補って合成しています。「予報の一致度」は、表示している予報(雨が降る/降らない)と同じ予想をしている情報源の割合です。表の「雨と予想した割合」は、各時刻に雨(0.2mm/h以上)と予想した情報源の割合です。どちらも降水確率ではありません。
+        月・惑星の位置、満ち欠け、月の出入りは端末内で天文計算しています(数分・1度程度の誤差があります。惑星はJPLの近似軌道要素を使用)。二十四節気・流星群・日食などの日付は国立天文台の暦をもとにしています(2028年以降の流星群は例年の日付です)。お気に入り・履歴・おでかけ中の家族の登録・自動記録の合言葉は、このブラウザの中にだけ保存されます。自動記録のデータは合言葉で暗号化して公開しているため、合言葉を知らない人には中身(観測所や地域)がわかりません。家族の気づかいポイントは、行き先と自分の地点の今日・あしたの予報(Open-Meteo)を比べて作っています。実況と「さっきまでの30分」の気温・湿度・雨量・風は、いちばん近い気象庁アメダス観測所の10分ごとの実測値です(湿度を測っている観測所は少ないため、少し離れた観測所の値になることがあります)。天気(晴れ・くもり)は日照時間と雨量からの推定で、夜は予報モデルの値を使います。体感気温と突風はOpen-Meteoの値です。気象庁の予報・警報は、気象庁ホームページの公開データ(府県天気予報・週間予報・警報・注意報。2026年5月28日からの新しい防災気象情報に対応)を、国土地理院の逆ジオコーダーで調べた市町村に合わせて表示しています。アンサンブル予報はOpen-Meteo経由のECMWF(51通り)・GFS(31通り)・ICON(40通り)です。上空の寒気・気圧の谷は、Open-Meteoの500hPa(上空約5,500m)の気温・高度・風と、大気の不安定さ(CAPE・リフティド指数)から判定しています。渦度は地点の東西南北約80kmの上空の風から計算しています。寒気の目安の気温は季節で変えています(夏は-6℃以下、冬は-30℃以下など)。自転車ナビの雨雲の距離と速さは、気象庁ナウキャストの画像から推定しています。風マップの地図は国土地理院の淡色地図で、細い矢印は約5km間隔の予報モデルの現在値、白ふちの丸と太い矢印はアメダスの実測値です。雷は気象庁の雷ナウキャスト(約5km以内の最大の活動度)から判定しています。「見えるか」の判定は月の高さ、空の明るさ(太陽の高さ)、雲の量(予報値)から出した目安です。
+        空気のきれいさは、CAMSのPM2.5・黄砂(ダスト)・オゾン・PM10・二酸化窒素の予測値を、環境基準やPM2.5の注意喚起の目安(日平均70μg/m³)などと比べて5段階にしたものです。オゾンは光化学オキシダント濃度の目安に換算しています。自治体の注意報そのものではありません。
+        データ: <a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">気象庁</a>、<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>(CC BY 4.0)、<a href="https://developer.yahoo.co.jp/sitemap/" target="_blank" rel="noopener">Web Services by Yahoo! JAPAN</a>、<a href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>。防災の判断には必ず気象庁の発表を確認してください。
+      </p>
+    </div>
+  </details>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const MODELS = [
+  {key:"jma_seamless", label:"気象庁MSM", w:2},
+  {key:"ecmwf_ifs025", label:"ECMWF", w:1},
+  {key:"icon_seamless", label:"ICON", w:1},
+  {key:"gfs_seamless", label:"GFS", w:1},
+];
+const STEP = 5, SLOTS = 7, PAST = 6; // 6 past slots (30 min) + now + 6 future
+const RAIN = 0.2;
+const MIN = 60e3;
+const DEFAULT_PLACE = {name:"東京都千代田区", lat:35.6940, lon:139.7536};
+const JMA_COLORS = [
+  [[242,242,255],0.5],[[160,210,255],3],[[33,140,255],7.5],[[0,65,255],15],
+  [[250,245,0],25],[[255,153,0],40],[[255,40,0],65],[[180,0,104],90]
+];
+
+function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function load(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function el(tag,cls,text){const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e;}
+
+function colorFor(v){
+  if(v<RAIN) return "var(--dry)";
+  if(v<1) return "var(--r1)"; if(v<5) return "var(--r5)"; if(v<10) return "var(--r10)";
+  if(v<20) return "var(--r20)"; if(v<30) return "var(--r30)"; if(v<50) return "var(--r50)"; return "var(--r80)";
+}
+function word(v){
+  if(v<RAIN) return "降らない"; if(v<1) return "ぱらぱら雨"; if(v<5) return "雨";
+  if(v<10) return "やや強い雨"; if(v<20) return "強い雨"; if(v<30) return "激しい雨"; return "とても激しい雨";
+}
+const hm = d => d.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Tokyo"});
+const fmt = v => v==null ? "–" : (v<0.05 ? "0" : v.toFixed(1));
+const jstKey = ms => new Date(ms+9*3600e3).toISOString(); // "YYYY-MM-DDTHH:MM..." in JST
+const withTimeout = (p,ms,label) => Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(label||"時間切れ")),ms))]);
+
+async function getJSON(url){
+  let r;
+  try{ r = await withTimeout(fetch(url),12000,"応答なし"); }
+  catch(e){ throw new Error(e.message==="応答なし"?"応答なし":"接続できません"); }
+  let j=null; try{ j = await r.json(); }catch(e){}
+  if(!r.ok || (j && j.error)) throw new Error((j && j.reason) ? j.reason : "HTTP "+r.status);
+  if(j==null) throw new Error("応答の形式が想定外");
+  return j;
+}
+
+// ---------- weather icons ----------
+function wxKind(c){
+  if(c==null) return "cloud";
+  if(c<=1) return "sun"; if(c===2) return "partly"; if(c===3) return "cloud"; if(c===45||c===48) return "fog";
+  if((c>=71&&c<=77)||c===85||c===86) return "snow"; if(c>=95) return "bolt"; return "rain";
+}
+function wxShort(c){
+  if(c==null) return "–";
+  if(c<=1) return "晴れ"; if(c===2) return "晴れ時々くもり"; if(c===3) return "くもり"; if(c===45||c===48) return "きり";
+  if(c>=51&&c<=57) return "霧雨"; if(c===65||c===82) return "強い雨"; if((c>=61&&c<=67)||(c>=80&&c<=81)) return "雨";
+  if((c>=71&&c<=77)||c===85||c===86) return "雪"; if(c>=95) return "かみなり"; return "–";
+}
+const CLOUD = "M15 38H35A8 8 0 0 0 35 22A11 11 0 0 0 14 20A9 9 0 0 0 15 38Z";
+function icon(kind){
+  const s=document.createElementNS(NS,"svg"); s.setAttribute("viewBox","0 0 48 48"); s.setAttribute("aria-hidden","true");
+  let h="";
+  const face = (y,col) => `<circle cx="21" cy="${y}" r="1.2" fill="${col}"/><circle cx="29" cy="${y}" r="1.2" fill="${col}"/><path d="M23.6 ${y+2.6}q1.4 1.3 2.8 0" stroke="${col}" stroke-width="1.2" fill="none" stroke-linecap="round"/>`;
+  if(kind==="sun"){
+    let rays=""; for(let i=0;i<8;i++){const a=i*Math.PI/4; rays+=`<line x1="${24+14*Math.cos(a)}" y1="${24+14*Math.sin(a)}" x2="${24+19*Math.cos(a)}" y2="${24+19*Math.sin(a)}" stroke="var(--sun)" stroke-width="3" stroke-linecap="round"/>`;}
+    h = rays+`<circle cx="24" cy="24" r="10" fill="var(--sun)"/>`+`<circle cx="20" cy="23" r="1.2" fill="#6b4a12"/><circle cx="28" cy="23" r="1.2" fill="#6b4a12"/><path d="M22.6 26.4q1.4 1.3 2.8 0" stroke="#6b4a12" stroke-width="1.2" fill="none" stroke-linecap="round"/>`;
+  } else if(kind==="partly"){
+    h = `<circle cx="17" cy="17" r="8" fill="var(--sun)"/><path d="${CLOUD}" fill="var(--cloud)"/>`+face(30,"#fff");
+  } else if(kind==="cloud" || kind==="fog"){
+    h = `<path d="${CLOUD}" fill="var(--cloud)"/>`+face(30,"#fff");
+    if(kind==="fog") h += `<g stroke="var(--cloud)" stroke-width="2.5" stroke-linecap="round"><line x1="10" y1="42" x2="30" y2="42"/><line x1="18" y1="46" x2="38" y2="46"/></g>`;
+  } else {
+    h = `<g transform="translate(0,-5)"><path d="${CLOUD}" fill="var(--cloud)"/>${face(30,"#fff")}</g>`;
+    if(kind==="rain") h += `<g fill="var(--rainc)"><path d="M17 37q-2 4 0 5q2-1 0-5z"/><path d="M25 39q-2 4 0 5q2-1 0-5z"/><path d="M33 37q-2 4 0 5q2-1 0-5z"/></g>`;
+    if(kind==="snow") h += `<g fill="var(--snow)"><circle cx="17" cy="40" r="2.2"/><circle cx="25" cy="43" r="2.2"/><circle cx="33" cy="40" r="2.2"/></g>`;
+    if(kind==="bolt") h += `<path d="M25 33l-5 8h4l-2 6l7-9h-4l2-5z" fill="var(--bolt)"/>`;
+  }
+  s.innerHTML=h; return s;
+}
+
+// ---------- series helpers ----------
+function sampleSeries(s,t){
+  if(!s) return null;
+  const c = s.times.map(x=>x - s.span/2);
+  for(let i=0;i<c.length-1;i++){
+    if(t>=c[i] && t<=c[i+1]){
+      const a=s.vals[i], b=s.vals[i+1]; if(a==null||b==null) return a??b;
+      return a+(b-a)*(t-c[i])/(c[i+1]-c[i]);
+    }
+  }
+  return null;
+}
+function hasWindow(s,from,to){
+  if(!s) return false;
+  let n=0; s.times.forEach((t,i)=>{ if(t>=from && t<=to && s.vals[i]!=null) n++; });
+  return n>=2;
+}
+
+// ---------- Open-Meteo ----------
+async function fetchModel(md,lat,lon,start){
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`+
+    `&models=${md.key}&minutely_15=precipitation&hourly=precipitation,temperature_2m&forecast_days=3&timezone=GMT`;
+  const j = await getJSON(u);
+  const pick = blk => blk ? (blk.precipitation || blk["precipitation_"+md.key]) : null;
+  const toMs = t => new Date(t+"Z").getTime();
+  const m15 = pick(j.minutely_15), h = pick(j.hourly);
+  const sM = m15 ? {times:j.minutely_15.time.map(toMs), vals:m15.map(v=>v==null?null:v*4), span:15*MIN, kind:"15分値"} : null;
+  const sH = h ? {times:j.hourly.time.map(toMs), vals:h.map(v=>v==null?null:v), span:60*MIN, kind:"1時間値"} : null;
+  const tk = j.hourly ? (j.hourly.temperature_2m || j.hourly["temperature_2m_"+md.key]) : null;
+  const hourly = sH ? {times:sH.times, precip:sH.vals, temp: tk || []} : null;
+  if(hasWindow(sM,start-15*MIN,start+60*MIN)) return Object.assign(sM,{hourly});
+  if(hasWindow(sH,start-60*MIN,start+120*MIN)) return Object.assign(sH,{hourly});
+  throw new Error("この時間帯のデータなし");
+}
+async function fetchWeather(lat,lon){
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`+
+    `&current=temperature_2m,relative_humidity_2m,weather_code,cloud_cover,apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m`+
+    `&hourly=weather_code,temperature_2m,relative_humidity_2m,precipitation_probability,uv_index,cloud_cover,apparent_temperature,wind_speed_10m,wind_direction_10m`+
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,wind_speed_10m_max`+
+    `&wind_speed_unit=ms`+
+    `&timezone=Asia%2FTokyo&forecast_days=3`;
+  return await getJSON(u);
+}
+async function fetchOzone(lat,lon){
+  const u = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`+
+    `&hourly=pm2_5,pm10,dust,ozone,nitrogen_dioxide&timezone=Asia%2FTokyo&forecast_days=2`;
+  return (await getJSON(u)).hourly;
+}
+function uvLabel(u){ if(u==null) return ""; u=Math.round(u); return u<=2?"弱い":u<=5?"中くらい":u<=7?"強い":u<=10?"とても強い":"極端に強い"; }
+
+// ---------- JMA nowcast ----------
+function tileOf(lat,lon,z){
+  const n=2**z, x=(lon+180)/360*n, lr=lat*Math.PI/180;
+  const y=(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n;
+  return {tx:Math.floor(x),ty:Math.floor(y),px:Math.floor((x-Math.floor(x))*256),py:Math.floor((y-Math.floor(y))*256)};
+}
+function pixelToMm(r,g,b,a){
+  if(a<30) return 0;
+  let best=null,bd=1e9;
+  for(const [c,v] of JMA_COLORS){const d=(c[0]-r)**2+(c[1]-g)**2+(c[2]-b)**2; if(d<bd){bd=d;best=v}}
+  return bd<2500 ? best : 0;
+}
+async function readTile(url,px,py){
+  const r = await fetch(url); if(r.status===404) return 0; if(!r.ok) throw new Error("tile "+r.status);
+  const bmp = await createImageBitmap(await r.blob());
+  const cv = typeof OffscreenCanvas!=="undefined" ? new OffscreenCanvas(256,256) : Object.assign(document.createElement("canvas"),{width:256,height:256});
+  const cx = cv.getContext("2d"); cx.drawImage(bmp,0,0);
+  const d = cx.getImageData(Math.max(0,px-1),Math.max(0,py-1),3,3).data; let m=0;
+  for(let i=0;i<d.length;i+=4) m=Math.max(m,pixelToMm(d[i],d[i+1],d[i+2],d[i+3]));
+  return m;
+}
+async function fetchNowcast(lat,lon){
+  const base="https://www.jma.go.jp/bosai/jmatile/data/nowc/";
+  const [n1,n2] = await Promise.all([getJSON(base+"targetTimes_N1.json"), getJSON(base+"targetTimes_N2.json")]);
+  const parse = s => Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12));
+  const latest = n1.filter(e=>e.elements?.includes("hrpns")).sort((a,b)=>b.validtime.localeCompare(a.validtime))[0];
+  const fc = n2.filter(e=>e.elements?.includes("hrpns") && e.basetime===latest.basetime);
+  const parseT = s => Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12));
+  const lt=parseT(latest.validtime);
+  const pastObs = n1.filter(e=>e.elements?.includes("hrpns") && e.basetime===e.validtime && e!==latest && parseT(e.validtime)>=lt-35*MIN);
+  const seen=new Set(); const items = [...pastObs, latest, ...fc].filter(e=>{const k=e.basetime+e.validtime; if(seen.has(k)) return false; seen.add(k); return true;})
+    .sort((a,b)=>a.validtime.localeCompare(b.validtime));
+  const z=10, t=tileOf(lat,lon,z);
+  const vals = await Promise.all(items.map(e =>
+    readTile(`${base}${e.basetime}/none/${e.validtime}/surf/hrpns/${z}/${t.tx}/${t.ty}.png`,t.px,t.py).catch(()=>null)));
+  const pts = items.map((e,i)=>({t:parse(e.validtime),v:vals[i]})).filter(p=>p.v!=null);
+  if(!pts.length) throw new Error("レーダー画像を読めませんでした");
+  return {basetime:parse(latest.basetime), pts, frames: items.map(e=>({t:parse(e.validtime), bt:e.basetime, vt:e.validtime}))};
+}
+function samplePts(src,t){
+  if(!src) return null;
+  for(const p of src.pts){ if(Math.abs(p.t-t)<2.5*MIN) return p.v; }
+  return null;
+}
+
+// ---------- Yahoo! JAPAN YOLP weather (JSONP) ----------
+function fetchYahoo(lat,lon,id){
+  return new Promise((resolve,reject)=>{
+    const cb="yolp_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
+    const sc=document.createElement("script");
+    let called=false;
+    const done=()=>{clearTimeout(tm); setTimeout(()=>{try{delete window[cb]}catch(e){window[cb]=undefined}},1000); sc.remove();};
+    const tm=setTimeout(()=>{done(); reject(new Error("応答なし"))},12000);
+    window[cb]=j=>{ called=true; done();
+      try{
+        if(j && j.Error) throw new Error(j.Error.Message||"エラー");
+        const list=j.Feature[0].Property.WeatherList.Weather;
+        const parse=s=>Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10)-9,+s.slice(10,12));
+        resolve({pts:list.map(w=>({t:parse(w.Date),v:+w.Rainfall}))});
+      }catch(e){ reject(new Error(e.message && e.message!=="エラー" ? e.message : "応答の形式が想定外")) }
+    };
+    sc.onload=()=>{ if(!called){ done(); reject(new Error("Client IDが無効か、Yahoo!側で拒否されました")); } };
+    sc.onerror=()=>{ done(); reject(new Error("Client IDが無効か、接続できません")); };
+    sc.src=`https://map.yahooapis.jp/weather/V1/place?appid=${encodeURIComponent(id)}&coordinates=${lon.toFixed(4)},${lat.toFixed(4)}&output=json&interval=5&past=1&callback=${cb}`;
+    document.head.appendChild(sc);
+  });
+}
+
+// ---------- JMA AMeDAS (10-minute observations) ----------
+async function getText(url){
+  let r; try{ r=await withTimeout(fetch(url),12000,"応答なし"); }catch(e){ throw new Error("接続できません"); }
+  if(!r.ok) throw new Error("HTTP "+r.status); return (await r.text()).trim();
+}
+let amedasTable=null;
+const AMEDAS="https://www.jma.go.jp/bosai/amedas/";
+const amKey = ms => { const p=jstParts(ms); return `${p.y}${pad(p.m)}${pad(p.d)}${pad(p.h)}${pad(p.mi)}00`; };
+function distKm(a1,o1,a2,o2){ const r=Math.PI/180, x=(o2-o1)*r*Math.cos((a1+a2)/2*r), y=(a2-a1)*r; return Math.hypot(x,y)*6371; }
+const amVal = v => Array.isArray(v) && v[0]!=null && (v[1]===0 || v[1]==null) ? v[0] : null;
+async function fetchAmedas(lat,lon){
+  if(!amedasTable) amedasTable = await getJSON(AMEDAS+"const/amedastable.json");
+  const lt = Date.parse(await getText(AMEDAS+"data/latest_time.txt"));
+  if(!isFinite(lt)) throw new Error("観測時刻を読めませんでした");
+  const map = await getJSON(AMEDAS+`data/map/${amKey(lt)}.json`);
+  const near = Object.entries(amedasTable).map(([id,st])=>({id, name:st.kjName, la:st.lat[0]+st.lat[1]/60, lo:st.lon[0]+st.lon[1]/60,
+      d:distKm(lat,lon, st.lat[0]+st.lat[1]/60, st.lon[0]+st.lon[1]/60)}))
+    .filter(x=>x.d<60).sort((a,b)=>a.d-b.d);
+  const pick = (el,maxD) => near.find(x=>x.d<=maxD && map[x.id] && amVal(map[x.id][el])!=null);
+  const st = { temp:pick("temp",40), humidity:pick("humidity",60), precipitation10m:pick("precipitation10m",25),
+               wind:pick("wind",40), sun10m:pick("sun10m",60) };
+  if(!st.temp && !st.precipitation10m) throw new Error("近くに観測所がありません");
+  // 10-minute series for the last 30 minutes from each station's point file (3-hour blocks)
+  const blockOf = ms => { const p=jstParts(ms); return `${p.y}${pad(p.m)}${pad(p.d)}_${pad(Math.floor(p.h/3)*3)}`; };
+  const blocks=[...new Set([blockOf(lt), blockOf(lt-30*MIN)])];
+  const ids=[...new Set(Object.values(st).filter(Boolean).map(x=>x.id))];
+  const pointData={};
+  await Promise.all(ids.map(async id=>{
+    pointData[id]={};
+    await Promise.all(blocks.map(b=>getJSON(AMEDAS+`data/point/${id}/${b}.json`).then(j=>Object.assign(pointData[id],j)).catch(()=>{})));
+  }));
+  const series=[];
+  for(let k=3;k>=0;k--){
+    const t=lt-k*10*MIN, key=amKey(t), row={t};
+    for(const el of ["temp","humidity","precipitation10m","wind","sun10m"]){
+      const s2=st[el]; if(!s2) { row[el]=null; continue; }
+      const rec = pointData[s2.id]?.[key] || (k===0 ? map[s2.id] : null);
+      row[el] = rec ? amVal(rec[el]) : null;
+      if(el==="wind") row.windDirection = rec ? amVal(rec.windDirection) : null;
+    }
+    series.push(row);
+  }
+  const winds = near.filter(x=>x.d<=30 && map[x.id] && amVal(map[x.id].wind)!=null).map(x=>{
+    const code=amVal(map[x.id].windDirection); return {name:x.name, lat:x.la, lon:x.lo, speed:amVal(map[x.id].wind), dir: code==null||code===0 ? null : (code%16)*22.5};
+  });
+  return {time:lt, st, series, winds};
+}
+function windWord(v){
+  if(v==null) return ""; if(v<1.5) return "ほぼ無風"; if(v<3.4) return "そよ風"; if(v<5.5) return "木の葉がゆれる";
+  if(v<8) return "やや強い"; if(v<10.8) return "強め・傘がさしにくい"; if(v<13.9) return "強い風"; return "とても強い風";
+}
+function windArrow(deg){ // arrow pointing where the wind blows TO
+  const s=document.createElementNS(NS,"svg"); s.setAttribute("viewBox","-8 -8 16 16"); s.setAttribute("aria-hidden","true");
+  s.innerHTML=`<path d="M0,-6 L4,4 L0,2 L-4,4 Z" fill="var(--sky)" transform="rotate(${(deg+180)%360})"/>`; return s;
+}
+// estimate sky condition from observations
+function obsWeather(row,lat,lon,w){
+  if(row.precipitation10m!=null && row.precipitation10m>0) return {kind: (row.temp!=null&&row.temp<=1)?"snow":"rain", text:(row.temp!=null&&row.temp<=1)?"雪":"雨", est:false};
+  const sun=ASTRO.sunPos(row.t,lat,lon).alt;
+  if(sun>3 && row.sun10m!=null){
+    if(row.sun10m>=7) return {kind:"sun",text:"晴れ",est:false};
+    if(row.sun10m>=2) return {kind:"partly",text:"晴れ時々くもり",est:false};
+    return {kind:"cloud",text:"くもり",est:false};
+  }
+  const i = w?.hourly ? w.hourly.time.findIndex(t=>t.slice(0,13)===jstKey(row.t).slice(0,13)) : -1;
+  if(i>=0){ const c=w.hourly.weather_code[i]; let k=wxKind(c); let t=wxShort(c); if(k==="rain"||k==="snow"||k==="bolt"){k="cloud";t="くもり";} return {kind:k,text:t,est:true}; }
+  if(w?.current){ let k=wxKind(w.current.weather_code), t=wxShort(w.current.weather_code); if(k==="rain"||k==="snow"||k==="bolt"){k="cloud";t="くもり";} return {kind:k,text:t,est:true}; }
+  return {kind:"cloud",text:"–",est:true};
+}
+
+// ---------- JMA thunder nowcast ----------
+function thunderLevel(r,g,b,a){
+  if(a<30) return 0;
+  if(r>120 && b>80 && g<90) return 4;     // purple: 激しい雷
+  if(r>200 && g<110 && b<110) return 3;   // red: やや激しい雷
+  if(r>200 && g>=110 && g<215 && b<120) return 2; // orange: 雷あり
+  return 1;                               // yellow etc.: 雷可能性あり
+}
+async function readThunder(url,px,py,rad){
+  const r = await fetch(url); if(r.status===404) return {point:0,near:0}; if(!r.ok) throw new Error("tile "+r.status);
+  const bmp = await createImageBitmap(await r.blob());
+  const cv = typeof OffscreenCanvas!=="undefined" ? new OffscreenCanvas(256,256) : Object.assign(document.createElement("canvas"),{width:256,height:256});
+  const cx = cv.getContext("2d"); cx.drawImage(bmp,0,0);
+  const x0=Math.max(0,px-rad), y0=Math.max(0,py-rad), x1=Math.min(255,px+rad), y1=Math.min(255,py+rad);
+  const d=cx.getImageData(x0,y0,x1-x0+1,y1-y0+1).data, wdt=x1-x0+1;
+  let near=0, point=0;
+  for(let i=0;i<d.length;i+=4){
+    const lv=thunderLevel(d[i],d[i+1],d[i+2],d[i+3]); if(!lv) continue;
+    const px2=x0+(i/4)%wdt, py2=y0+Math.floor(i/4/wdt);
+    if((px2-px)**2+(py2-py)**2<=rad*rad) near=Math.max(near,lv);
+    if(Math.abs(px2-px)<=1&&Math.abs(py2-py)<=1) point=Math.max(point,lv);
+  }
+  return {point,near};
+}
+async function fetchThunder(lat,lon){
+  const base="https://www.jma.go.jp/bosai/jmatile/data/nowc/";
+  const lists = await Promise.allSettled(["N1","N2","N3"].map(n=>getJSON(base+`targetTimes_${n}.json`)));
+  const all = lists.flatMap(r=>r.status==="fulfilled" && Array.isArray(r.value) ? r.value : []).filter(e=>e.elements?.includes("thns"));
+  if(!all.length) throw new Error("雷データの一覧がありません");
+  const bt = all.map(e=>e.basetime).sort().pop();
+  const parseT = s => Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12));
+  const items = all.filter(e=>e.basetime===bt).sort((a,b)=>a.validtime.localeCompare(b.validtime));
+  const seen=new Set(); const uniq=items.filter(e=>!seen.has(e.validtime)&&seen.add(e.validtime));
+  const z=8, t=tileOf(lat,lon,z), rad=Math.max(3,Math.round(5/(40075*Math.cos(lat*Math.PI/180)/2**z/256))); // ~5 km
+  const res = await Promise.all(uniq.map(e=>readThunder(`${base}${e.basetime}/none/${e.validtime}/surf/thns/${z}/${t.tx}/${t.ty}.png`,t.px,t.py,rad).then(v=>({t:parseT(e.validtime),...v})).catch(()=>null)));
+  const ok=res.filter(Boolean); if(!ok.length) throw new Error("雷の画像を読めませんでした");
+  const nowR = ok[0]; const ahead = ok.filter(x=>x.t>nowR.t);
+  const maxAhead = ahead.reduce((a,x)=>x.near>a.near?x:a,{near:0,point:0,t:null});
+  return {basetime:parseT(bt), now:nowR, ahead:maxAhead};
+}
+const THUNDER_WORD=["雷の心配なし","雷の可能性あり","雷あり","やや激しい雷","激しい雷"];
+
+// ---------- render: now (observed) & past 30 minutes ----------
+function renderNow(w,am,amErr,th,thErr,rows){
+  const {lat,lon}=place;
+  const big=$("obsBig"); big.textContent=""; const nl=$("nowLine"); nl.textContent=""; $("nowTip").textContent=""; $("obsSrc").textContent="";
+  const c=w?.current;
+  const last = am ? am.series[am.series.length-1] : null;
+  const temp = last?.temp ?? c?.temperature_2m ?? null;
+  const hum = last?.humidity ?? c?.relative_humidity_2m ?? null;
+  const wind = last?.wind ?? c?.wind_speed_10m ?? null;
+  const wdirDeg = last?.windDirection!=null ? (last.windDirection===0?null:(last.windDirection%16)*22.5) : (c?.wind_direction_10m ?? null);
+  const wx = last ? obsWeather(last,lat,lon,w) : (c ? {kind:wxKind(c.weather_code),text:wxShort(c.weather_code),est:true} : null);
+  if(wx || temp!=null){
+    if(wx) big.appendChild(icon(wx.kind));
+    const tv=el("div"); tv.appendChild(el("div","tmp", temp==null?"–":`${temp.toFixed(1)}℃`));
+    const feel = c?.apparent_temperature;
+    tv.appendChild(el("div","feel", (wx?wx.text:"") + (feel!=null?`・体感 ${Math.round(feel)}℃`:"")));
+    big.appendChild(tv);
+  }
+  if(hum!=null) nl.appendChild(el("span","pill",`湿度 ${Math.round(hum)}%`));
+  if(wind!=null){
+    const p=el("span","pill wind");
+    if(wdirDeg!=null) p.appendChild(windArrow(wdirDeg));
+    p.append(`${wdirDeg!=null?DIRS[Math.round(wdirDeg/22.5)%16]+"の風 ":(last?.windDirection===0?"静穏 ":"風 ")}${wind.toFixed(1)}m/s`);
+    nl.appendChild(p);
+  }
+  if(c?.wind_gusts_10m!=null && c.wind_gusts_10m>=8) nl.appendChild(el("span","pill",`突風 ${Math.round(c.wind_gusts_10m)}m/s`));
+  if(last?.precipitation10m!=null) nl.appendChild(el("span","pill",`10分雨量 ${last.precipitation10m.toFixed(1)}mm`));
+  if(c?.cloud_cover!=null) nl.appendChild(el("span","pill",`雲 ${Math.round(c.cloud_cover)}%`));
+  const hrIdx = w?.hourly && c ? w.hourly.time.findIndex(t=>t.slice(0,13)===c.time.slice(0,13)) : -1;
+  const uvNow = hrIdx>=0 ? w.hourly.uv_index?.[hrIdx] : null;
+  if(uvNow!=null) nl.appendChild(el("span","pill",`紫外線 ${Math.round(uvNow)} ${uvLabel(uvNow)}`));
+  if(th) nl.appendChild(el("span","pill",`雷: ${THUNDER_WORD[th.now.near]}`));
+
+  const tips=[];
+  if(wind!=null && wind>=8) tips.push(`風が${windWord(wind)}。傘や帽子に気をつけてね`);
+  if(c?.apparent_temperature!=null && temp!=null && c.apparent_temperature<=temp-3) tips.push("風で実際より寒く感じるよ。1枚多めに");
+  if(c?.apparent_temperature!=null && temp!=null && c.apparent_temperature>=temp+3) tips.push("むしっとして暑く感じるよ。水分をとってね");
+  const uvMax = w?.daily?.uv_index_max?.[0];
+  if(uvMax!=null && uvMax>=6) tips.push("今日は紫外線が強いよ。日焼け止めと帽子を忘れずに");
+  if(hum!=null && hum<35) tips.push("空気がかわいているよ。保湿してね");
+  $("nowTip").textContent=tips.join("。");
+  if(!big.childNodes.length && !nl.childNodes.length) nl.textContent = amErr? `取れなかったよ(${amErr})` : "–";
+
+  const srcs=[];
+  if(am){
+    const names=[...new Map(Object.entries(am.st).filter(([,v])=>v).map(([,v])=>[v.id,`${v.name}(${v.d.toFixed(0)}km)`])).values()];
+    srcs.push(`${hm(new Date(am.time))} 観測・アメダス ${names.join("、")}`);
+  } else if(amErr) srcs.push(`アメダスは取れなかったので予報の値です(${amErr})`);
+  if(th) srcs.push(`雷: 気象庁 雷ナウキャスト ${hm(new Date(th.basetime))}`);
+  $("obsSrc").textContent=srcs.join(" / ");
+
+  // past 30 minutes
+  const pb=$("past"); pb.textContent=""; $("pastSrc").textContent="";
+  if(am){
+    am.series.forEach((r,i)=>{
+      const cell=el("div","pc"+(i===am.series.length-1?" latest":""));
+      const mins=Math.round((am.time-r.t)/MIN);
+      cell.appendChild(el("div","t", mins===0?`${hm(new Date(r.t))} 最新`:`${hm(new Date(r.t))}`));
+      // radar at this exact spot (same source as the rain graph above), averaged over the 10 minutes
+      const rr=(rows||[]).filter(x=>x.lead<=0 && x.t>r.t-10*MIN && x.t<=r.t+2.5*MIN);
+      const rv=rr.length? Math.max(...rr.map(x=>x.n ?? x.y ?? x.val ?? 0)) : null;
+      let ow=obsWeather(r,lat,lon,w);
+      const gaugeDry = r.precipitation10m==null || r.precipitation10m===0;
+      if(rv!=null && rv>=RAIN && gaugeDry) ow={kind:"rain", text: rv<1?"小雨":"雨", est:false, radar:true};
+      cell.appendChild(icon(ow.kind)); cell.appendChild(el("div","w",ow.text+(ow.est?"*":ow.radar?"†":"")));
+      cell.appendChild(el("div","tp", r.temp==null?"–":`${r.temp.toFixed(1)}℃`));
+      cell.appendChild(el("div","h", `湿度 ${r.humidity==null?"–":Math.round(r.humidity)+"%"}`));
+      cell.appendChild(el("div","h", `雨量計 ${r.precipitation10m==null?"–":r.precipitation10m.toFixed(1)+"mm"}`));
+      if(rv!=null) cell.appendChild(el("div","h", `レーダー ${rv<RAIN?"なし":rv<1?"弱い雨":word(rv)}`));
+      cell.appendChild(el("div","h", `風 ${r.wind==null?"–":r.wind.toFixed(1)+"m/s"}`));
+      pb.appendChild(cell);
+    });
+    const pst=am.st.precipitation10m;
+    $("pastSrc").textContent=`10分ごとの実測値。「雨量計」は${pst?`${pst.name}(${pst.d.toFixed(0)}km先)`:"近くのアメダス"}の10分間の雨量で、0.5mm単位で測るため弱い雨は0.0mmになります。「レーダー」はこの場所の雨雲レーダーの値で、上の雨のグラフと同じです。† はレーダーだけがとらえた弱い雨、* は夜などで日照がないため予報モデルからの推定`;
+  } else pb.textContent = amErr? `取れなかったよ(${amErr})` : "–";
+
+  // thunder alert
+  const tb=$("thunder"); tb.textContent="";
+  const lvNow=th?.now.near||0, lvAhead=th?.ahead.near||0;
+  if(lvNow>=1 || lvAhead>=1){
+    const ic=icon("bolt"); tb.appendChild(ic);
+    const tx=el("div");
+    if(lvNow>=1) tx.append(el("b",null,`近くで${THUNDER_WORD[lvNow]}!`), el("span",null,"ゴロゴロ聞こえたら、すぐに建物や車の中へ。木の下は危ないよ"));
+    else tx.append(el("b",null,`${hm(new Date(th.ahead.t))}ごろ ${THUNDER_WORD[lvAhead]}`), el("span",null,"1時間以内に近くで雷のおそれ。外遊びは早めに切り上げてね"));
+    tb.appendChild(tx); tb.hidden=false;
+  } else tb.hidden=true;
+}
+
+// ---------- upper air (500 hPa) & surface pressure ----------
+async function fetchUpper(lat,lon){
+  const c=`latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`;
+  const u1=`https://api.open-meteo.com/v1/forecast?${c}&hourly=temperature_500hPa,geopotential_height_500hPa,cape,lifted_index,temperature_2m,pressure_msl,weather_code`+
+    `&past_days=1&forecast_days=3&timezone=Asia%2FTokyo`;
+  const d=0.75, P=[[lat,lon],[lat+d,lon],[lat-d,lon],[lat,lon+d],[lat,lon-d]]; // C,N,S,E,W
+  const u2=`https://api.open-meteo.com/v1/forecast?latitude=${P.map(x=>x[0].toFixed(3)).join(",")}&longitude=${P.map(x=>x[1].toFixed(3)).join(",")}`+
+    `&hourly=wind_speed_500hPa,wind_direction_500hPa&wind_speed_unit=ms&past_days=1&forecast_days=3&timezone=Asia%2FTokyo`;
+  const [a,b]=await Promise.allSettled([getJSON(u1),getJSON(u2)]);
+  if(a.status==="rejected") throw a.reason;
+  const h=a.value.hourly; const out={h, vort:null};
+  if(b.status==="fulfilled" && Array.isArray(b.value) && b.value.length===5){
+    const g=b.value.map(r=>r.hourly);
+    const uv=(r,i)=>{ const sp=r.wind_speed_500hPa?.[i], dr=r.wind_direction_500hPa?.[i]; if(sp==null||dr==null) return null;
+      const a2=dr*Math.PI/180; return [-sp*Math.sin(a2), -sp*Math.cos(a2)]; };
+    const dy=2*d*111200, dx=2*d*111200*Math.cos(lat*Math.PI/180);
+    out.vort = g[0].time.map((t,i)=>{ const N=uv(g[1],i),S=uv(g[2],i),E=uv(g[3],i),W=uv(g[4],i); if(!N||!S||!E||!W) return null;
+      return ((E[1]-W[1])/dx - (N[0]-S[0])/dy)*1e5; }); // 10^-5 s^-1
+  }
+  return out;
+}
+// "YYYY-MM-DDTHH:MM" (JST) → "15時ごろ" / "あした15時ごろ" / "10日15時ごろ"
+function whenLabel(t){
+  const tod=jstDateStr(Date.now()), tom=jstDateStr(Date.now()+864e5), d=t.slice(0,10), hh=+t.slice(11,13);
+  return `${d===tod?"":d===tom?"あした":`${+t.slice(8,10)}日`}${hh}時ごろ`;
+}
+function coldThreshold(month){ // T500 rule-of-thumb thresholds (℃) for "上空寒気"
+  if(month>=6&&month<=9) return [-6,-9];
+  if(month===5||month===10) return [-15,-18];
+  if(month===4||month===11) return [-20,-24];
+  if(month===3) return [-24,-27];
+  return [-30,-36];
+}
+function analyzeUpper(up,now){
+  if(!up?.h?.time) return null;
+  const h=up.h; const nowKey=jstKey(now).slice(0,13);
+  const i0=h.time.findIndex(t=>t.slice(0,13)===nowKey); if(i0<0) return null;
+  const at=(arr,k)=>arr?.[i0+k] ?? null;
+  const rng=(arr,a,b)=>{ const v=(arr||[]).slice(i0+a,i0+b+1).filter(x=>x!=null); return v; };
+  const month=jstParts(now).m; const [th1,th2]=coldThreshold(month);
+  const T0=at(h.temperature_500hPa,0), T12=at(h.temperature_500hPa,12), T24=at(h.temperature_500hPa,24);
+  const Tmin24=Math.min(...rng(h.temperature_500hPa,0,24));
+  const Z0=at(h.geopotential_height_500hPa,0), Zmin24=Math.min(...rng(h.geopotential_height_500hPa,0,24));
+  const dT12 = (T0!=null&&T12!=null)? T12-T0 : null;
+  const dT24 = (T0!=null&&T24!=null)? T24-T0 : null;
+  const dZ24 = (Z0!=null&&isFinite(Zmin24))? Zmin24-Z0 : null;
+  const v0=up.vort?.[i0] ?? null, vmax24 = up.vort ? Math.max(...up.vort.slice(i0,i0+25).filter(x=>x!=null)) : null;
+  const capeMax=Math.max(0,...rng(h.cape,0,24)); const liMin=Math.min(99,...rng(h.lifted_index,0,24));
+  const t2max=Math.max(...rng(h.temperature_2m,0,24)); const dTv = isFinite(t2max)&&isFinite(Tmin24)? t2max-Tmin24 : null;
+  const coldAir = isFinite(Tmin24) && Tmin24<=th1, coldStrong = isFinite(Tmin24) && Tmin24<=th2;
+  const coldFlow = (dT12!=null && dT12<=-3) || (dT24!=null && dT24<=-4);
+  const trough = dZ24!=null && dZ24<=-60 && vmax24!=null && isFinite(vmax24) && vmax24>=4;
+  const unstable = capeMax>=300 || liMin<=0 || (dTv!=null && dTv>=(month>=6&&month<=9?42:38));
+  const someInst = capeMax>=100 || liMin<=2;
+  let risk=0;
+  if((coldAir||coldFlow) && unstable) risk=2;
+  else if((coldAir||coldFlow||trough) && (someInst||unstable)) risk=1;
+  else if(coldStrong || (coldFlow && trough)) risk=1;
+  // when is it most unstable (next 24h)?
+  let peakH=null, best=-1; for(let k=0;k<=24;k++){ const v=(h.cape?.[i0+k]??0)-(h.lifted_index?.[i0+k]??5)*50; if(v>best){best=v;peakH=h.time[i0+k];} }
+  const rainCodes = rng(h.weather_code,0,24).some(c=>c>=51);
+  return {T0,T12,T24,Tmin24,dT12,dT24,Z0,dZ24,v0,vmax24,capeMax,liMin,dTv,coldAir,coldStrong,coldFlow,trough,unstable,risk,th1,th2,month,peakH,rainCodes,i0,
+          t2now: at(h.temperature_2m,0)};
+}
+function sparkSVG(times,vals,opt){
+  const W=340,H=opt.h||120,L=34,R=8,T=10,B=22, pw=W-L-R, ph=H-T-B;
+  const v=vals.filter(x=>x!=null); if(v.length<2) return null;
+  let lo=Math.min(...v, opt.ref??Infinity), hi=Math.max(...v, opt.ref??-Infinity); const pad2=(hi-lo)*0.15||1; lo-=pad2; hi+=pad2;
+  const X=i=>L+i/(vals.length-1)*pw, Y=x=>T+(hi-x)/(hi-lo)*ph;
+  let g="";
+  for(let k=0;k<=3;k++){ const val=lo+(hi-lo)*k/3; g+=`<line x1="${L}" x2="${W-R}" y1="${Y(val)}" y2="${Y(val)}" stroke="var(--line)" stroke-dasharray="3 4"/><text x="${L-4}" y="${Y(val)+3}" font-size="9" text-anchor="end" fill="var(--muted)">${opt.fmt(val)}</text>`; }
+  if(opt.ref!=null) g+=`<line x1="${L}" x2="${W-R}" y1="${Y(opt.ref)}" y2="${Y(opt.ref)}" stroke="var(--rainc)" stroke-width="1.5" stroke-dasharray="6 4"/><text x="${W-R}" y="${Y(opt.ref)-4}" font-size="9" text-anchor="end" fill="var(--rainc)">${opt.refLabel}</text>`;
+  // colored segments
+  for(let i=1;i<vals.length;i++){ if(vals[i]==null||vals[i-1]==null) continue;
+    const col = opt.segColor ? opt.segColor(i) : "var(--lav)";
+    g+=`<line x1="${X(i-1).toFixed(1)}" y1="${Y(vals[i-1]).toFixed(1)}" x2="${X(i).toFixed(1)}" y2="${Y(vals[i]).toFixed(1)}" stroke="${col}" stroke-width="3" stroke-linecap="round"/>`; }
+  if(opt.nowIdx!=null && vals[opt.nowIdx]!=null){ g+=`<line x1="${X(opt.nowIdx)}" x2="${X(opt.nowIdx)}" y1="${T}" y2="${T+ph}" stroke="var(--accent)" stroke-dasharray="2 3"/><circle cx="${X(opt.nowIdx)}" cy="${Y(vals[opt.nowIdx])}" r="4.5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/><text x="${X(opt.nowIdx)+6}" y="${T+9}" font-size="10" font-weight="700" fill="var(--accent)">いま</text>`; }
+  (opt.ticks||[]).forEach(([i,label])=>{ g+=`<text x="${X(i).toFixed(1)}" y="${H-6}" font-size="9" text-anchor="middle" fill="var(--muted)">${label}</text>`; });
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("role","img"); svg.setAttribute("aria-label",opt.label||"グラフ"); svg.innerHTML=g; return svg;
+}
+function dayTicks(times,step){ const out=[]; times.forEach((t,i)=>{ const hh=+t.slice(11,13); if(hh%step===0) out.push([i, hh===0?`${+t.slice(8,10)}日`:`${hh}時`]); }); return out; }
+
+function renderPressure(up,now){
+  const lead=$("presLead"), sub=$("presSub"), ch=$("presChart"); ch.textContent=""; lead.className="lead";
+  const h=up?.h; if(!h?.pressure_msl){ lead.textContent="気圧のデータが取れなかったよ"; sub.textContent=""; return; }
+  const nowKey=jstKey(now).slice(0,13); const i0=h.time.findIndex(t=>t.slice(0,13)===nowKey); if(i0<0){ lead.textContent="–"; return; }
+  const a=Math.max(0,i0-24), b=Math.min(h.time.length-1,i0+24);
+  const times=h.time.slice(a,b+1), p=h.pressure_msl.slice(a,b+1), ni=i0-a;
+  // biggest 3-hour drop ahead
+  let drop3=0, dropAt=null; for(let i=ni;i+3<p.length;i++){ if(p[i]==null||p[i+3]==null) continue; const d=p[i+3]-p[i]; if(d<drop3){drop3=d; dropAt=times[i];} }
+  const p24 = p[Math.min(p.length-1,ni+24)], d24 = (p24!=null&&p[ni]!=null)? p24-p[ni] : null;
+  let pmin=Infinity, pminAt=null; for(let i=ni;i<p.length;i++){ if(p[i]!=null&&p[i]<pmin){pmin=p[i];pminAt=times[i];} }
+  let lvl=0; if(drop3<=-3 || (d24!=null&&d24<=-8)) lvl=2; else if(drop3<=-1.5 || (d24!=null&&d24<=-4)) lvl=1;
+  const when = whenLabel;
+  if(lvl===2){ lead.textContent=`気圧が大きく下がるよ。頭痛に注意`; lead.classList.add("bad"); }
+  else if(lvl===1){ lead.textContent=`気圧がゆるやかに下がるよ。少し注意`; lead.classList.add("warn"); }
+  else { lead.textContent= (d24!=null&&d24>=4) ? "気圧は上がっていくよ。体はラクになりそう" : "気圧は安定。頭痛の心配は少なめ"; lead.classList.add("ok"); }
+  const parts=[`いま ${p[ni]?.toFixed(0)}hPa`];
+  if(d24!=null) parts.push(`24時間後 ${d24>=0?"+":""}${d24.toFixed(1)}hPa`);
+  if(lvl>0 && dropAt) parts.push(`いちばん下がるのは ${when(dropAt)}から(3時間で${drop3.toFixed(1)}hPa)`);
+  if(lvl>0) parts.push("早めにお薬や休憩の準備を");
+  sub.textContent=parts.join("・");
+  const svg=sparkSVG(times,p,{h:120,nowIdx:ni,fmt:v=>v.toFixed(0),ticks:dayTicks(times,6),label:"気圧の変化のグラフ",
+    segColor:i=>{ if(i<=ni) return "var(--cloud)"; const d=(p[Math.min(p.length-1,i+2)]??p[i])-(p[i-1]??p[i]); return d<=-1.5?"var(--bad)":d<=-0.7?"var(--warn)":"var(--lav)"; }});
+  if(svg) ch.appendChild(svg);
+}
+
+function renderUpper(up,an,now){
+  const lead=$("upLead"), sub=$("upSub"), chips=$("upChips"), ch=$("upChart"), note=$("upNote");
+  lead.className="lead"; chips.textContent=""; ch.textContent=""; note.textContent="";
+  if(!an){ lead.textContent="上空のデータが取れなかったよ"; sub.textContent=""; return; }
+  const msgs=[];
+  if(an.coldStrong) msgs.push("上空に強い寒気");
+  else if(an.coldAir) msgs.push("上空に寒気");
+  if(an.coldFlow) msgs.push("寒気が流れ込んでくる");
+  if(an.trough) msgs.push("気圧の谷が近づいている");
+  if(an.risk===2){ lead.textContent=`${msgs.join("・")||"大気が不安定"}。急な雨や雷に注意`; lead.classList.add("bad"); }
+  else if(an.risk===1){ lead.textContent=`${msgs.join("・")||"上空の様子に変化"}。にわか雨の可能性`; lead.classList.add("warn"); }
+  else { lead.textContent = msgs.length? `${msgs.join("・")}。でも大気は安定していそう` : "上空は落ち着いているよ"; lead.classList.add("ok"); }
+  const peak = an.peakH && an.risk>0 ? `不安定になりやすいのは ${whenLabel(an.peakH)}` : "";
+  const winter = an.month>=12 || an.month<=2;
+  sub.textContent=[peak, (an.risk>0 && winter && an.t2now!=null && an.t2now<4) ? "雪や雷、突風にも注意" : ""].filter(Boolean).join("・");
+  const chip=t=>chips.appendChild(el("span","pill",t));
+  if(an.T0!=null) chip(`上空5,500mの気温 ${an.T0.toFixed(1)}℃`);
+  if(an.dT12!=null) chip(`12時間後 ${an.dT12>=0?"+":""}${an.dT12.toFixed(1)}℃`);
+  if(an.Z0!=null) chip(`高さ ${Math.round(an.Z0)}m${an.dZ24!=null?`(24時間で${an.dZ24>=0?"+":""}${Math.round(an.dZ24)}m)`:""}`);
+  if(an.v0!=null) chip(`渦度 ${an.v0>=0?"+":""}${an.v0.toFixed(1)}${an.vmax24!=null&&isFinite(an.vmax24)?` → 最大 ${an.vmax24.toFixed(1)}`:""}`);
+  chip(`不安定さ CAPE ${Math.round(an.capeMax)} J/kg・LI ${an.liMin<99?an.liMin.toFixed(1):"–"}`);
+  const h=up.h, a=an.i0, b=Math.min(h.time.length-1,a+48);
+  const times=h.time.slice(a,b+1), T=h.temperature_500hPa.slice(a,b+1);
+  const svg=sparkSVG(times,T,{h:120,nowIdx:0,ref:an.th1,refLabel:`寒気の目安 ${an.th1}℃`,fmt:v=>`${v.toFixed(0)}℃`,ticks:dayTicks(times,6),label:"上空5,500mの気温のグラフ",
+    segColor:i=>T[i]!=null&&T[i]<=an.th1?"var(--rainc)":"var(--lav)"});
+  if(svg) ch.appendChild(svg);
+  note.textContent=`グラフは上空5,500m(500hPa)の気温の48時間予報。青い点線より下がると、${an.month>=6&&an.month<=9?"夏の夕立・雷":an.month>=12||an.month<=2?"冬の大雪・雷":"にわか雨や雷"}の目安です。渦度(×10⁻⁵/秒)がプラスで大きくなるのは、気圧の谷が近づくサインです。`;
+}
+// hero supplement (e.g. sunny forecast but cold air aloft)
+function renderHint(an,w){
+  const hn=$("hint"); hn.className="hint"; hn.textContent="";
+  if(!an || an.risk===0) return;
+  const sunny = !an.rainCodes;
+  let t;
+  if(sunny) t = an.risk===2 ? "晴れ予報だけど、上空の寒気で急な夕立や雷のおそれ。折りたたみ傘があると安心" : "晴れ予報だけど、上空に寒気。にわか雨があるかも";
+  else t = an.risk===2 ? "上空の寒気で、雨が急に強まったり雷になるおそれ" : "上空の寒気で、雨の降り方が変わりやすいよ";
+  if(an.peakH) t += `(${whenLabel(an.peakH)}注意)`;
+  hn.textContent=t; hn.classList.add("on");
+}
+
+// ---------- forecast confidence (model spread) ----------
+function renderConfidence(models,now){
+  const box=$("conf"), lead=$("confLead"), sub=$("confSub"); box.textContent=""; lead.className="lead";
+  const avail=MODELS.filter(m=>models[m.key]?.hourly);
+  if(avail.length<2){ lead.textContent="比べられる予報モデルが足りないよ"; sub.textContent="2つ以上のモデルが取れると表示します"; return; }
+  const t0=Math.ceil(now/3600e3)*3600e3; const blocks=[];
+  for(let b=0;b<8;b++){
+    const from=t0+b*3*3600e3, to=from+3*3600e3; let wsum=0, wet=0; const temps=[]; const rains=[];
+    avail.forEach(m=>{ const hh=models[m.key].hourly; let mx=null, ts=[];
+      hh.times.forEach((t,i)=>{ if(t>from && t<=to){ if(hh.precip[i]!=null) mx=Math.max(mx??0,hh.precip[i]); if(hh.temp[i]!=null) ts.push(hh.temp[i]); } });
+      const mw=m._w??m.w; if(mx!=null){ wsum+=mw; if(mx>=0.3) wet+=mw; rains.push(mx>=0.3); }
+      if(ts.length) temps.push(ts.reduce((a,c)=>a+c,0)/ts.length);
+    });
+    const share = wsum? wet/wsum : null; const spread = temps.length>1 ? Math.max(...temps)-Math.min(...temps) : null;
+    let score = share==null?null: Math.abs(2*share-1); // 1 = all agree
+    if(score!=null && spread!=null) score -= Math.max(0,(spread-1.5)*0.12);
+    blocks.push({from, share, spread, score, nWet:rains.filter(Boolean).length, n:rains.length});
+  }
+  const lv = s => s==null?["–","var(--line)"] : s>=0.75?["自信あり","var(--ok)"] : s>=0.35?["ふつう","var(--butter)"] : ["外れやすい","var(--bad)"];
+  blocks.forEach(b=>{
+    const c=el("div","cf"); const hh=jstParts(b.from).h;
+    c.appendChild(el("div","t",`${hh}〜${(hh+3)%24}時`));
+    const d=el("i","dot2"); const [label,col]=lv(b.score); d.style.background=col; c.appendChild(d);
+    c.appendChild(el("b",null,label));
+    c.appendChild(el("div","h", b.n? `雨 ${b.nWet}/${b.n}` : "雨 –"));
+    c.appendChild(el("div","h", b.spread!=null? `気温差 ${b.spread.toFixed(1)}℃` : ""));
+    box.appendChild(c);
+  });
+  const weak=blocks.filter(b=>b.score!=null && b.score<0.35);
+  if(weak.length){
+    // group consecutive weak blocks into time ranges
+    const ranges=[]; blocks.forEach((b,i)=>{ const isW=b.score!=null&&b.score<0.35; if(!isW) return;
+      if(ranges.length && ranges[ranges.length-1].end===i-1) ranges[ranges.length-1].end=i; else ranges.push({start:i,end:i}); });
+    const fmtR=r=>`${jstParts(blocks[r.start].from).h}〜${(jstParts(blocks[r.end].from).h+3)%24}時`;
+    lead.textContent = weak.length>=6 ? "この先24時間は全体的に外れやすい" : `外れやすいのは ${ranges.slice(0,2).map(fmtR).join("と")}ごろ`;
+    lead.classList.add("warn");
+    const why = weak.some(b=>b.share!=null && b.share>0.2 && b.share<0.8) ? "雨が降るかどうか、予報モデルの意見が分かれています" : "予報モデルによって気温の予想がばらついています";
+    sub.textContent=`${why}。この時間は直前のレーダー予報(上の雨のグラフ)をこまめに見てね`;
+  } else { lead.textContent="この先24時間は予報の自信あり"; lead.classList.add("ok"); sub.textContent="予報モデルどうしの意見がそろっています"; }
+}
+
+// ---------- bike / outing navigator ----------
+async function radarField(nc,lat,lon){
+  // nearest rain (≥1 mm/h) distance & bearing in the latest frame and +30 min frame (z=8, ~0.5 km/px)
+  if(!nc?.frames?.length) return null;
+  const base="https://www.jma.go.jp/bosai/jmatile/data/nowc/";
+  const z=8, [wx,wy]=worldPx(lat,lon,z), R=90;
+  const kmPerPx = 40075*Math.cos(lat*Math.PI/180)/(256*2**z);
+  const obs = nc.frames.filter(f=>f.bt===f.vt).sort((a,b)=>b.t-a.t)[0] || nc.frames[0];
+  const later = nc.frames.filter(f=>f.bt!==f.vt).sort((a,b)=>Math.abs(a.t-obs.t-30*MIN)-Math.abs(b.t-obs.t-30*MIN))[0];
+  const tx0=Math.floor((wx-R)/256), tx1=Math.floor((wx+R)/256), ty0=Math.floor((wy-R)/256), ty1=Math.floor((wy+R)/256);
+  async function nearest(f){
+    let best=null;
+    for(let tx=tx0;tx<=tx1;tx++) for(let ty=ty0;ty<=ty1;ty++){
+      let img; try{
+        const r=await fetch(`${base}${f.bt}/none/${f.vt}/surf/hrpns/${z}/${tx}/${ty}.png`); if(r.status===404) continue; if(!r.ok) continue;
+        img=await createImageBitmap(await r.blob());
+      }catch(e){ continue; }
+      const cv = typeof OffscreenCanvas!=="undefined" ? new OffscreenCanvas(256,256) : Object.assign(document.createElement("canvas"),{width:256,height:256});
+      const cx=cv.getContext("2d"); cx.drawImage(img,0,0); const d=cx.getImageData(0,0,256,256).data;
+      for(let i=0;i<d.length;i+=16){ // sample every 4th pixel horizontally for speed
+        if(d[i+3]<30) continue; const mm=pixelToMm(d[i],d[i+1],d[i+2],d[i+3]); if(mm<1) continue;
+        const px=tx*256+(i/4)%256, py=ty*256+Math.floor(i/4/256); const dx=px-wx, dy=py-wy, dist=Math.hypot(dx,dy);
+        if(dist<=R && (!best||dist<best.dist)) best={dist, dx, dy, mm};
+      }
+    }
+    return best? {km:best.dist*kmPerPx, bearing:((Math.atan2(best.dx,-best.dy)*180/Math.PI)+360)%360, mm:best.mm} : {km:null};
+  }
+  const a=await nearest(obs), b= later? await nearest(later) : null;
+  let speed=null, eta=null;
+  if(a.km!=null && b?.km!=null){ const dt=(later.t-obs.t)/3600e3; if(dt>0){ speed=(a.km-b.km)/dt; if(speed>3 && a.km>1) eta=a.km/speed*60; } }
+  return {now:a, later:b, speed, eta, range:R*kmPerPx};
+}
+function renderBike(rows,nc,w,am,field){
+  const lead=$("bikeLead"), sub=$("bikeSub"), row=$("bikeRow"), rad=$("bikeRadar"); row.textContent=""; lead.className="lead";
+  const mins=+$("commute").value||20; const now=Date.now();
+  // rain at each 5-min slot for 60 min: blend rows (0–30) then nowcast points (35–60)
+  const future=rows.filter(r=>r.lead>=0);
+  const slots=[]; for(let k=0;k<12;k++){ const t=Math.floor(now/(5*MIN))*5*MIN+k*5*MIN; const r=future.find(x=>Math.abs(x.t-t)<2.5*MIN);
+    let v = r? r.val : samplePts(nc,t); slots.push({t, v, ride: k*5<mins}); }
+  slots.forEach(s=>{ const i=el("i"+(s.ride?"":"")); i.className=s.ride?"ride":""; i.style.background = s.v==null?"var(--line)":colorFor(s.v); i.title=`${hm(new Date(s.t))} ${fmt(s.v)}mm/h`; row.appendChild(i); });
+  const wetIdx=slots.findIndex(s=>(s.v||0)>=RAIN);
+  const rideSlots=slots.filter(s=>s.ride); const rideWet=rideSlots.findIndex(s=>(s.v||0)>=RAIN);
+  const arrive=hm(new Date(now+mins*MIN));
+  if(slots.every(s=>s.v==null)){ lead.textContent="雨雲のデータが取れなかったよ"; sub.textContent=""; }
+  else if(rideWet===-1){
+    lead.textContent=`いま出発すれば、濡れずに着けそう(${arrive}着)`; lead.classList.add("ok");
+    sub.textContent = wetIdx>=0 ? `${wetIdx*5}分後には雨。寄り道せずにね` : "1時間は雨雲なし";
+  } else if(rideWet===0){
+    const stop=slots.findIndex(s=>(s.v||0)<RAIN);
+    lead.textContent = stop>0 ? `いまは雨。${stop*5}分ほど待つと、やみそう` : "しばらく雨。カッパで出発しよう"; lead.classList.add("warn");
+    if(stop>0){ const after=slots.slice(stop, stop+Math.ceil(mins/5)); const dry=after.length===Math.ceil(mins/5) && after.every(s=>(s.v||0)<RAIN);
+      sub.textContent = dry ? `${hm(new Date(slots[stop].t))}に出発すれば、濡れずに着けそう` : "やんでもまたすぐ降りそう。カッパがおすすめ"; }
+  } else {
+    lead.textContent=`出発すると${rideWet*5}分後(${hm(new Date(rideSlots[rideWet].t))}ごろ)に降られそう`; lead.classList.add("bad");
+    const stop=slots.findIndex((s,i)=>i>rideWet && (s.v||0)<RAIN);
+    sub.textContent = rideWet*5>=mins*0.6 ? "急げば間に合うかも。カッパを持って出発しよう" : (stop>0? `${hm(new Date(slots[stop].t))}ごろまで待つのも手` : "カッパを用意してね");
+  }
+  const windNow = am?.series?.[am.series.length-1]?.wind ?? w?.current?.wind_speed_10m;
+  if(windNow!=null && windNow>=6) sub.textContent += `${sub.textContent?"。":""}風が${windNow.toFixed(0)}m/s。向かい風だとかなりきついよ`;
+  // radar field
+  rad.textContent="";
+  if(field?.now?.km!=null){
+    const dir=DIRS[Math.round(field.now.bearing/22.5)%16];
+    let t=`いちばん近い雨雲: ${dir} 約${Math.max(1,Math.round(field.now.km))}km`;
+    if(field.eta!=null && field.eta<=120) t+=`・時速${Math.round(field.speed)}kmで近づき中(約${Math.round(field.eta)}分で到着の目安)`;
+    else if(field.speed!=null && field.speed<-3) t+="・遠ざかり中";
+    rad.textContent=t;
+  } else if(field?.later?.km!=null) rad.textContent=`いまは近くに雨雲なし。でも30分後には約${Math.max(1,Math.round(field.later.km))}kmの所に雨雲ができそう(急に発生する雨雲かも)`;
+  else if(field) rad.textContent=`半径${Math.round(field.range)}km以内に雨雲なし`;
+}
+
+// ---------- JMA official forecast & warnings ----------
+let jmaArea=null; const muniCache=new Map();
+async function jmaAreaFor(lat,lon){
+  const key=lat.toFixed(3)+","+lon.toFixed(3); if(muniCache.has(key)) return muniCache.get(key);
+  const pr=(async()=>{
+    const j=await getJSON(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lon}`);
+    const muni=j.results?.muniCd; if(!muni) throw new Error("市町村を特定できません(海の上など)");
+    if(!jmaArea) jmaArea=await getJSON("https://www.jma.go.jp/bosai/common/const/area.json");
+    const m5=String(muni).padStart(5,"0");
+    let c20=jmaArea.class20s[m5+"00"] ? m5+"00" : Object.keys(jmaArea.class20s).find(k=>k.startsWith(m5));
+    if(!c20) throw new Error("予報区を特定できません");
+    const c15=jmaArea.class20s[c20].parent, c10=jmaArea.class15s[c15]?.parent, office=jmaArea.class10s[c10]?.parent;
+    if(!office) throw new Error("予報区を特定できません");
+    return {c20, c20name:jmaArea.class20s[c20].name, c10, c10name:jmaArea.class10s[c10].name, office, officeName:jmaArea.offices[office]?.name};
+  })();
+  muniCache.set(key,pr); pr.catch(()=>muniCache.delete(key)); return pr;
+}
+const WARN_NAMES={"02":"暴風雪警報","03":"レベル3大雨警報","04":"洪水警報","05":"暴風警報","06":"大雪警報","07":"波浪警報","08":"レベル3高潮警報","09":"レベル3土砂災害警報",
+  "10":"レベル2大雨注意報","12":"大雪注意報","13":"風雪注意報","14":"雷注意報","15":"強風注意報","16":"波浪注意報","17":"融雪注意報","18":"洪水注意報","19":"レベル2高潮注意報",
+  "20":"濃霧注意報","21":"乾燥注意報","22":"なだれ注意報","23":"低温注意報","24":"霜注意報","25":"着氷注意報","26":"着雪注意報","27":"その他の注意報","29":"レベル2土砂災害注意報",
+  "32":"暴風雪特別警報","33":"レベル5大雨特別警報","35":"暴風特別警報","36":"大雪特別警報","37":"波浪特別警報","38":"レベル5高潮特別警報","39":"レベル5土砂災害特別警報",
+  "43":"レベル4大雨危険警報","48":"レベル4高潮危険警報","49":"レベル4土砂災害危険警報"};
+function warnClass(code){ const n=+code; if(n>=32&&n<=39) return "l5"; if(n>=43&&n<=49) return "l4"; if(n>=2&&n<=9) return "warn"; return "adv"; }
+async function fetchWarnings(area){
+  const data=await getJSON(`https://www.jma.go.jp/bosai/warning/data/r8/${area.office}.json`);
+  const reports=Array.isArray(data)?data:[data];
+  const found=new Map(); let latest=null;
+  reports.forEach(rp=>{
+    const rt=Date.parse(rp.reportDatetime); if(isFinite(rt)&&(!latest||rt>latest)) latest=rt;
+    const items=rp.warning?.class20Items || rp.class20Items || [];
+    items.forEach(it=>{ if(String(it.areaCode)!==area.c20) return;
+      (it.kinds||[]).forEach(k=>{ if(!k.code || k.status==="解除" || k.status==="発表警報・注意報はなし") return; found.set(String(k.code).padStart(2,"0"),k.status); }); });
+  });
+  if(latest && Date.now()-latest>3*864e5) throw new Error("警報データが古いままです");
+  return {list:[...found.entries()].map(([code,status])=>({code,status,name:WARN_NAMES[code]||`警報・注意報(コード${code})`,cls:warnClass(code)}))
+    .sort((a,b)=>({l5:0,l4:1,warn:2,adv:3}[a.cls]-{l5:0,l4:1,warn:2,adv:3}[b.cls])), time:latest};
+}
+async function fetchOfficial(area){ return await getJSON(`https://www.jma.go.jp/bosai/forecast/data/forecast/${area.office}.json`); }
+const TELOP={100:"晴れ",101:"晴れ時々くもり",102:"晴れ一時雨",103:"晴れ時々雨",104:"晴れ一時雪",105:"晴れ時々雪",110:"晴れのち時々くもり",111:"晴れのちくもり",112:"晴れのち一時雨",113:"晴れのち時々雨",114:"晴れのち雨",115:"晴れのち一時雪",116:"晴れのち時々雪",117:"晴れのち雪",
+  200:"くもり",201:"くもり時々晴れ",202:"くもり一時雨",203:"くもり時々雨",204:"くもり一時雪",205:"くもり時々雪",209:"霧",210:"くもりのち時々晴れ",211:"くもりのち晴れ",212:"くもりのち一時雨",213:"くもりのち時々雨",214:"くもりのち雨",215:"くもりのち一時雪",216:"くもりのち時々雪",217:"くもりのち雪",
+  300:"雨",301:"雨時々晴れ",302:"雨時々止む",303:"雨時々雪",306:"大雨",308:"雨で暴風を伴う",311:"雨のち晴れ",313:"雨のちくもり",314:"雨のち時々雪",315:"雨のち雪",
+  400:"雪",401:"雪時々晴れ",402:"雪時々止む",403:"雪時々雨",405:"大雪",406:"風雪強い",407:"暴風雪",411:"雪のち晴れ",413:"雪のちくもり",414:"雪のち雨"};
+const telopText = c => TELOP[+c] || ({1:"晴れ",2:"くもり",3:"雨",4:"雪"}[Math.floor(+c/100)] || "–");
+const telopKind = c => { const n=+c, h=Math.floor(n/100); if(h===1) return (n===100?"sun":"partly"); if(h===2) return (n===209?"fog":(n===201||n===210||n===211)?"partly":"cloud"); if(h===3) return "rain"; if(h===4) return "snow"; return "cloud"; };
+function pickArea(areas,code){ return (areas||[]).find(a=>a.area?.code===code) || (areas||[])[0]; }
+let lastOfficial=null;
+function officialPops(of,area){ // [{from,to,pop}] 6-hour blocks (ms)
+  const ts=of?.[0]?.timeSeries?.find(t=>t.areas?.[0]?.pops); if(!ts) return [];
+  const a=pickArea(ts.areas,area.c10); return ts.timeDefines.map((t,i)=>({from:Date.parse(t), to:Date.parse(t)+6*3600e3, pop: a.pops[i]===""?null:+a.pops[i]})).filter(x=>x.pop!=null);
+}
+function renderOfficial(of,ofErr,area,areaErr,wr,wrErr){
+  // warnings
+  const wb=$("warnbox"); wb.textContent=""; wb.className="warnbox";
+  if(wr?.list?.length){
+    const top=wr.list[0].cls; wb.classList.add(top==="l5"?"lv-black":top==="l4"?"lv-purple":top==="warn"?"lv-red":"lv-adv");
+    const msg = top==="l5" ? "命を守る行動を。ただちに安全を確保して" : top==="l4" ? "危険な場所にいる人は全員避難を(警戒レベル4相当)" : top==="warn" ? "警報が出ています。危ない場所に近づかないで" : "注意報が出ています";
+    wb.appendChild(el("div","wt",`${area.c20name}に ${msg}`));
+    const wl=el("div","wlist"); wr.list.forEach(w=>wl.appendChild(el("span","wchip "+w.cls,w.name))); wb.appendChild(wl);
+    const notes=[];
+    if(wr.list.some(w=>w.code==="14")) notes.push("雷注意報:ゴロゴロ聞こえたら建物の中へ");
+    if(wr.list.some(w=>["03","10","43","33","09","29","49","39"].includes(w.code))) notes.push("大雨・土砂災害:川や崖、用水路には近づかないで。キキクル(危険度分布)で身近な危険を確認できます");
+    if(wr.list.some(w=>["05","15","02","13","35","32"].includes(w.code))) notes.push("強風:飛ばされやすい物を片付けて、自転車は気をつけて");
+    if(wr.list.some(w=>w.code==="21")) notes.push("乾燥注意報:火の取り扱いに注意。のどの保湿も");
+    notes.forEach(t=>wb.appendChild(el("div","wn","・"+t)));
+    wb.appendChild(el("div","wn",`発表: 気象庁 ${wr.time?hm(new Date(wr.time)):""}`));
+    const a=document.createElement("a"); a.href=`https://www.jma.go.jp/bosai/warning/#area_type=class20s&area_code=${area.c20}`; a.target="_blank"; a.rel="noopener"; a.textContent="気象庁の警報ページを開く"; a.className="wn"; wb.appendChild(a);
+    wb.hidden=false;
+  } else wb.hidden=true;
+
+  // forecast
+  $("ofcTitle").textContent = area ? `気象庁の予報(${area.c10name})` : "気象庁の予報";
+  const days=$("ofcDays"), week=$("ofcWeek"), src=$("ofcSrc"); days.textContent=""; week.textContent=""; src.textContent="";
+  if(!of){ days.textContent = `取れなかったよ(${areaErr||ofErr||"不明"})`; return; }
+  const short=of[0], ts0=short.timeSeries[0], a0=pickArea(ts0.areas,area.c10);
+  const pops=officialPops(of,area);
+  for(let i=0;i<Math.min(2,ts0.timeDefines.length);i++){
+    const d=el("div","ofc-day"); const dt=ts0.timeDefines[i]; const date=dt.slice(0,10);
+    d.appendChild(el("div","dl",`${date===jstDateStr(Date.now())?"今日":date===jstDateStr(Date.now()+864e5)?"あした":`${+date.slice(5,7)}/${+date.slice(8,10)}`}`));
+    const row=el("div","fm-wx"); row.appendChild(icon(telopKind(a0.weatherCodes?.[i]))); d.appendChild(row);
+    d.appendChild(el("div","tx",(a0.weathers?.[i]||telopText(a0.weatherCodes?.[i])).replace(/　/g," ")));
+    if(a0.winds?.[i]) d.appendChild(el("div","note2",a0.winds[i].replace(/　/g," ")));
+    const pp=el("div","pops"); [0,6,12,18].forEach(h=>{ const from=Date.parse(date+`T${pad(h)}:00:00+09:00`); const b=pops.find(x=>x.from===from);
+      const sp=el("span"); sp.append(`${h}時`, el("b",null, b? b.pop+"%" : "–")); pp.appendChild(sp); }); d.appendChild(el("div","note2","降水確率(6時間ごと)")); d.appendChild(pp);
+    days.appendChild(d);
+  }
+  const wk=of[1]; if(wk?.timeSeries?.[0]){
+    const t0=wk.timeSeries[0], aw=pickArea(t0.areas,area.c10);
+    const tt=wk.timeSeries[1], at=tt? (tt.areas||[])[0] : null;
+    t0.timeDefines.forEach((t,i)=>{
+      const c=el("div","wk"); const dd=new Date(Date.parse(t)+9*3600e3);
+      c.appendChild(el("div","t",`${dd.getUTCMonth()+1}/${dd.getUTCDate()}(${"日月火水木金土"[dd.getUTCDay()]})`));
+      c.appendChild(icon(telopKind(aw.weatherCodes?.[i]))); c.appendChild(el("div",null,telopText(aw.weatherCodes?.[i])));
+      const mx=at?.tempsMax?.[i], mn=at?.tempsMin?.[i];
+      if(mx||mn) c.appendChild(el("div","tp",`${mx||"–"}/${mn||"–"}℃`));
+      if(aw.pops?.[i]) c.appendChild(el("div","t",`降水 ${aw.pops[i]}%`));
+      const r=aw.reliabilities?.[i]; if(r) c.appendChild(el("span","rel "+r,`信頼度 ${r}`));
+      week.appendChild(c);
+    });
+  }
+  src.textContent=`${short.publishingOffice||area.officeName} ${short.reportDatetime?hm(new Date(Date.parse(short.reportDatetime))):""} 発表`+(wrErr?` / 警報は取れませんでした(${wrErr})`:"");
+}
+
+// ---------- ensemble ----------
+const ENS_MODELS=[ {label:"ECMWF", ids:["ecmwf_ifs025_ensemble","ecmwf_ifs025"]}, {label:"GFS", ids:["ncep_gefs025","gfs025","gfs_seamless"]}, {label:"ICON", ids:["dwd_icon_seamless_eps","icon_seamless_eps","icon_seamless"]} ];
+async function fetchEnsembleModel(m,lat,lon){
+  let lastErr;
+  for(const id of m.ids){
+    try{
+      const j=await getJSON(`https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&models=${id}&hourly=precipitation,temperature_2m&forecast_days=3&timezone=GMT`);
+      const h=j.hourly; if(!h?.time) throw new Error("データなし");
+      const pk=Object.keys(h).filter(k=>/^precipitation(_member\d+)?(_|$)/.test(k)), tk=Object.keys(h).filter(k=>/^temperature_2m(_member\d+)?(_|$)/.test(k));
+      if(pk.length<5) throw new Error("メンバーが少なすぎます");
+      return {label:m.label, id, times:h.time.map(t=>Date.parse(t+"Z")), P:pk.map(k=>h[k]), T:tk.map(k=>h[k])};
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr||new Error("取得できませんでした");
+}
+async function fetchEnsemble(lat,lon){
+  const rs=await Promise.allSettled(ENS_MODELS.map(m=>fetchEnsembleModel(m,lat,lon)));
+  const ok=rs.filter(r=>r.status==="fulfilled").map(r=>r.value);
+  if(!ok.length) throw rs[0].reason;
+  return {models:ok, failed:rs.map((r,i)=>r.status==="rejected"?ENS_MODELS[i].label:null).filter(Boolean)};
+}
+// probability that precipitation in [from,to) reaches thr mm (sum), across all members of all models
+function ensProb(ens,from,to,thr){
+  let n=0,hit=0;
+  ens.models.forEach(m=>m.P.forEach(arr=>{ let sum=0,cnt=0; m.times.forEach((t,i)=>{ if(t>from&&t<=to&&arr[i]!=null){sum+=arr[i];cnt++;} }); if(cnt){n++; if(sum>=thr) hit++;} }));
+  return n? {p:hit/n, n, hit} : null;
+}
+function ensHourly(ens,t){ // fraction of members with ≥0.3mm in the hour ending at t
+  let n=0,hit=0; ens.models.forEach(m=>{ const i=m.times.findIndex(x=>Math.abs(x-t)<30*MIN); if(i<0) return; m.P.forEach(a=>{ if(a[i]!=null){n++; if(a[i]>=0.3) hit++;} }); });
+  return n? hit/n : null;
+}
+const quant=(arr,q)=>{ const a=arr.filter(x=>x!=null).sort((x,y)=>x-y); if(!a.length) return null; const i=(a.length-1)*q, lo=Math.floor(i), hi=Math.ceil(i); return a[lo]+(a[hi]-a[lo])*(i-lo); };
+function renderEnsemble(ens,err){
+  const lead=$("ensLead"), sub=$("ensSub"), box=$("ensBlocks"), ch=$("ensChart"); lead.className="lead"; box.textContent=""; ch.textContent=""; sub.textContent="";
+  if(!ens){ lead.textContent=`取れなかったよ(${err||"不明"})`; return; }
+  const total=ens.models.reduce((a,m)=>a+m.P.length,0);
+  const now=Date.now(); const jstH=jstParts(now).h; const first=Date.UTC(...(()=>{const p=jstParts(now);return [p.y,p.m-1,p.d,Math.floor(p.h/6)*6];})())-9*3600e3;
+  const pops=officialPops(lastOfficial,lastArea||{c10:""});
+  const blocks=[];
+  for(let b=0;b<8;b++){ const from=first+b*6*3600e3, to=from+6*3600e3; const r=ensProb(ens,from,to,1); const j=pops.find(x=>x.from===from); blocks.push({from,to,r,j:j?.pop}); }
+  blocks.forEach(bk=>{
+    const c=el("div","eb"); const p=jstParts(bk.from); const day=jstDateStr(bk.from)===jstDateStr(now)?"今日":jstDateStr(bk.from)===jstDateStr(now+864e5)?"あした":`${p.d}日`;
+    c.appendChild(el("div","t",`${day}\n${p.h}-${p.h+6}時`.replace("\n"," ")));
+    const pct=bk.r? Math.round(bk.r.p*100) : null;
+    c.appendChild(el("div","p", pct==null?"–":`${pct}%`));
+    const bar=el("div","bar2"); const i=document.createElement("i"); i.style.width=(pct??0)+"%"; bar.appendChild(i); c.appendChild(bar);
+    c.appendChild(el("div","j", bk.j!=null?`気象庁 ${bk.j}%`:"気象庁 –"));
+    box.appendChild(c);
+  });
+  const next24=blocks.filter(b=>b.to>now && b.from<now+24*3600e3 && b.r);
+  const mx=next24.reduce((a,b)=>(b.r.p>(a?.r.p??-1)?b:a),null);
+  if(mx && mx.r.p>=0.3){ const p=jstParts(mx.from); const day=jstDateStr(mx.from)===jstDateStr(now)?"":"あした";
+    lead.textContent=`${day}${p.h}〜${p.h+6}時の雨の確率は ${Math.round(mx.r.p*100)}%`; lead.classList.add(mx.r.p>=0.6?"bad":"warn");
+    sub.textContent=`${mx.r.n}通りの計算のうち${mx.r.hit}通りで1mm以上の雨`+(mx.j!=null?`(気象庁の降水確率は${mx.j}%)`:"");
+  } else { lead.textContent="24時間以内は、ほとんどの計算で雨なし"; lead.classList.add("ok"); sub.textContent=`${total}通りの計算で確認`; }
+  // daily max temperature spread (tomorrow)
+  const tom=jstDateStr(now+864e5); const maxes=[];
+  ens.models.forEach(m=>m.T.forEach(arr=>{ let mx2=null; m.times.forEach((t,i)=>{ if(jstDateStr(t-30*MIN)===tom && arr[i]!=null) mx2=Math.max(mx2??-99,arr[i]); }); if(mx2!=null) maxes.push(mx2); }));
+  if(maxes.length>5){ const lo=quant(maxes,0.1), hi=quant(maxes,0.9); sub.textContent += `。あしたの最高気温は ${Math.round(lo)}〜${Math.round(hi)}℃(8割の計算がこの範囲)`; }
+  // temperature band chart (48h)
+  const times=[]; const p10=[],p50=[],p90=[];
+  for(let k=0;k<=48;k+=1){ const t=Math.ceil(now/3600e3)*3600e3+k*3600e3; const vals=[];
+    ens.models.forEach(m=>{ const i=m.times.findIndex(x=>x===t); if(i<0) return; m.T.forEach(a=>{ if(a[i]!=null) vals.push(a[i]); }); });
+    if(vals.length){ times.push(jstKey(t).slice(0,16)); p10.push(quant(vals,0.1)); p50.push(quant(vals,0.5)); p90.push(quant(vals,0.9)); } }
+  if(times.length>3){
+    const W=340,H=130,L=32,R=8,T=10,B=22,pw=W-L-R,ph=H-T-B; const lo=Math.min(...p10)-1, hi=Math.max(...p90)+1;
+    const X=i=>L+i/(times.length-1)*pw, Y=v=>T+(hi-v)/(hi-lo)*ph; let g="";
+    for(let k=0;k<=3;k++){ const v=lo+(hi-lo)*k/3; g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="3 4"/><text x="${L-4}" y="${Y(v)+3}" font-size="9" text-anchor="end" fill="var(--muted)">${Math.round(v)}℃</text>`; }
+    g+=`<polygon points="${p90.map((v,i)=>X(i).toFixed(1)+","+Y(v).toFixed(1)).join(" ")} ${p10.map((v,i)=>X(i).toFixed(1)+","+Y(v).toFixed(1)).reverse().join(" ")}" fill="var(--lav)" opacity=".3"/>`;
+    g+=`<polyline points="${p50.map((v,i)=>X(i).toFixed(1)+","+Y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--lav)" stroke-width="2.5"/>`;
+    dayTicks(times,6).forEach(([i,l])=>{ g+=`<text x="${X(i).toFixed(1)}" y="${H-6}" font-size="9" text-anchor="middle" fill="var(--muted)">${l}</text>`; });
+    const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("role","img"); svg.setAttribute("aria-label","気温の予報の幅"); svg.innerHTML=g; ch.appendChild(svg);
+  }
+  $("ensNote").textContent=`同じ予報を最初の条件を少しずつ変えて計算したもの(${ens.models.map(m=>`${m.label} ${m.P.length}通り`).join("・")}${ens.failed.length?`。${ens.failed.join("・")}は取れませんでした`:""})。「6時間に1mm以上の雨」になった計算の割合を降水確率とし、気象庁の降水確率と並べています。グラフの帯は8割の計算が収まった気温の幅、線は真ん中の値です。`;
+}
+
+// ---------- umbrella time slots ----------
+let uslots=(()=>{ try{ const v=JSON.parse(load("ab-uslots")||"[]"); return Array.isArray(v)?v.slice(0,3):[]; }catch(e){ return []; } })();
+let lastEns=null, lastArea=null;
+function slotWindow(sl,now){
+  const [fh,fm]=sl.from.split(":").map(Number), [th,tm]=sl.to.split(":").map(Number);
+  const d0=jstMidnight(now); let from=d0+(fh*60+fm)*MIN, to=d0+(th*60+tm)*MIN; if(to<=from) to+=864e5;
+  if(to<=now){ from+=864e5; to+=864e5; }
+  return {from,to,tomorrow: jstDateStr(from)!==jstDateStr(now)};
+}
+function renderUmbrella(rows,nc,w){
+  const box=$("uslots"); box.textContent="";
+  if(!uslots.length){ box.appendChild(el("div","sub2","時間帯を登録すると、その時間に傘がいるかをお知らせします")); return; }
+  const now=Date.now(); const pops=officialPops(lastOfficial,lastArea||{c10:""});
+  uslots.forEach((sl,idx)=>{
+    const win=slotWindow(sl,now); let p=null, why=[];
+    // within the next hour: radar-based nowcast is the most reliable
+    if(win.from<now+60*MIN){ let wet=false, any=false; for(let t=Math.max(win.from,now);t<=Math.min(win.to,now+60*MIN);t+=5*MIN){ const r=rows.find(x=>Math.abs(x.t-t)<2.5*MIN); const v=r?r.val:samplePts(nc,t); if(v!=null){any=true; if(v>=RAIN) wet=true;} }
+      if(any){ p= wet?0.9:0.08; why.push(wet?"雨雲レーダーで雨の予想":"雨雲レーダーで雨雲なし"); } }
+    if(p==null){
+      let pe=null; if(lastEns){ for(let t=Math.ceil(win.from/3600e3)*3600e3;t<=win.to+30*MIN;t+=3600e3){ const f=ensHourly(lastEns,t); if(f!=null) pe=Math.max(pe??0,f); } }
+      const pj=pops.filter(b=>b.to>win.from&&b.from<win.to).reduce((a,b)=>Math.max(a??0,b.pop/100),null);
+      if(pe!=null&&pj!=null) p=0.6*pe+0.4*pj; else p=pe??pj;
+      if(pe!=null) why.push(`アンサンブル ${Math.round(pe*100)}%`); if(pj!=null) why.push(`気象庁 ${Math.round(pj*100)}%`);
+    }
+    const [kind,verdict] = p==null?["cloud","わからない"] : p>=0.5?["rain","傘を持って行こう"] : p>=0.3?["cloud","折りたたみ傘があると安心"] : ["sun","傘はいらなさそう"];
+    const c=el("div","us"); c.appendChild(icon(kind));
+    const mid=el("div"); mid.appendChild(el("b",null,`${sl.label}(${win.tomorrow?"あした ":""}${sl.from}〜${sl.to})`));
+    mid.appendChild(el("div","verdict2",verdict));
+    // temperature hint at that time
+    let extra=""; const hk=jstKey(win.from).slice(0,13); const i=w?.hourly?.time?.findIndex(t=>t.slice(0,13)===hk) ?? -1;
+    if(i>=0){ const at=w.hourly.apparent_temperature?.[i] ?? w.hourly.temperature_2m?.[i]; if(at!=null) extra=`・体感${Math.round(at)}℃${at<=8?"、上着を":at>=28?"、水分を":""}`; }
+    mid.appendChild(el("span",null,`雨の確率 ${p==null?"–":Math.round(p*100)+"%"}${why.length?`(${why.join("・")})`:""}${extra}`));
+    c.appendChild(mid);
+    const rm=el("button",null,"外す"); rm.type="button"; rm.addEventListener("click",()=>{ uslots.splice(idx,1); store("ab-uslots",JSON.stringify(uslots)); renderUmbrella(rows,nc,w); });
+    c.appendChild(rm); box.appendChild(c);
+  });
+}
+function setupUmbrellaForm(){
+  $("uForm").addEventListener("submit",e=>{ e.preventDefault();
+    const label=$("uLabel").value.trim()||"おでかけ", from=$("uFrom").value, to=$("uTo").value, msg=$("uMsg");
+    if(uslots.length>=3){ msg.textContent="登録は3つまで。どれかを「外す」で外してね"; return; }
+    if(!/^\d\d:\d\d$/.test(from)||!/^\d\d:\d\d$/.test(to)){ msg.textContent="時刻を入れてね"; return; }
+    uslots.push({label,from,to}); store("ab-uslots",JSON.stringify(uslots)); $("uLabel").value=""; msg.textContent=`「${label}」を登録したよ`;
+    if(lastBike) renderUmbrella(lastBike.rows,lastBike.nc,lastBike.w);
+  });
+}
+
+// ---------- verification (forecast vs AMeDAS, stored on this device) ----------
+const VKEY = () => `${place.lat.toFixed(2)},${place.lon.toFixed(2)}`;
+function loadJ(k,def){ try{ const v=JSON.parse(load(k)||"null"); return v??def; }catch(e){ return def; } }
+function recordForecasts(models,now){
+  const snaps=loadJ("ab-fc:"+VKEY(),[]); const madeH=Math.floor(now/3600e3)*3600e3;
+  if(snaps.some(s=>s.m===madeH)) return;
+  const snap={m:madeH, t:{}, r:{}};
+  MODELS.forEach(md=>{ const h=models[md.key]?.hourly; if(!h) return; snap.t[md.key]={}; snap.r[md.key]={};
+    h.times.forEach((t,i)=>{ if(t>=madeH+3*3600e3 && t<=madeH+24*3600e3){ if(h.temp?.[i]!=null) snap.t[md.key][t]=+h.temp[i].toFixed(1); if(h.precip?.[i]!=null) snap.r[md.key][t]=+h.precip[i].toFixed(1); } }); });
+  snaps.push(snap); const keep=snaps.filter(s=>s.m>now-30*3600e3).slice(-30);
+  store("ab-fc:"+VKEY(),JSON.stringify(keep));
+}
+function verify(am,rows,now){
+  if(!am?.series?.length) return;
+  const obs=am.series[am.series.length-1]; const target=Math.round(obs.t/3600e3)*3600e3;
+  if(Math.abs(obs.t-target)>15*MIN || obs.temp==null) return; // need an observation near the top of the hour
+  const st=loadJ("ab-ver:"+VKEY(),{done:[],m:{}});
+  if(st.done.includes(target)) return;
+  const snaps=loadJ("ab-fc:"+VKEY(),[]).filter(s=>target-s.m>=3*3600e3 && target-s.m<=24*3600e3).sort((a,b)=>Math.abs(target-a.m-6*3600e3)-Math.abs(target-b.m-6*3600e3));
+  const snap=snaps[0]; if(!snap) return;
+  const rainObs = am.series.some(r=>(r.precipitation10m||0)>0) || rows.some(r=>r.lead<=0 && r.lead>=-10 && (r.n??0)>=RAIN);
+  MODELS.forEach(md=>{ const ft=snap.t[md.key]?.[target], fr=snap.r[md.key]?.[target]; if(ft==null&&fr==null) return;
+    const s=st.m[md.key]||(st.m[md.key]={e:[],h:[]});
+    if(ft!=null) s.e.push(+(ft-obs.temp).toFixed(1)); if(fr!=null) s.h.push((fr>=0.3)===rainObs?1:0);
+    s.e=s.e.slice(-100); s.h=s.h.slice(-100); });
+  st.done.push(target); st.done=st.done.slice(-200);
+  store("ab-ver:"+VKEY(),JSON.stringify(st));
+}
+function verStats(){
+  const st=loadJ("ab-ver:"+VKEY(),{done:[],m:{}}); const out={};
+  MODELS.forEach(md=>{ const s=st.m[md.key]; if(!s) return; const n=s.e.length;
+    out[md.key]={n, mae:n? s.e.reduce((a,x)=>a+Math.abs(x),0)/n : null, bias:n? s.e.reduce((a,x)=>a+x,0)/n : null, hit:s.h.length? s.h.reduce((a,x)=>a+x,0)/s.h.length : null, nh:s.h.length}; });
+  return {checks:st.done.length, m:out};
+}
+// ---------- automatic hourly records (data/stats.json written by GitHub Actions) ----------
+let srvStats=null, srvErr=null, lastCorr=null;
+// data/stats.enc.json is AES-256-GCM encrypted (key from PBKDF2-SHA256 of the passphrase), so the public
+// repository never shows where the family lives. Same format as scripts/record.mjs.
+const keyCache=new Map();
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decryptBox(box,pass){
+  if(!crypto?.subtle) throw new Error("このブラウザでは復号できません");
+  const ck=pass+"|"+box.salt+"|"+box.iter; let key=keyCache.get(ck);
+  if(!key){ const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
+    key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:unb64(box.salt),iterations:box.iter||200000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+    keyCache.set(ck,key); }
+  try{ const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(box.iv)},key,unb64(box.data)); return JSON.parse(new TextDecoder().decode(pt)); }
+  catch(e){ throw new Error("合言葉が違うみたい"); }
+}
+async function fetchServerStats(){
+  const pass=$("dataKey").value; if(!pass) throw new Error("合言葉が未入力");
+  const r=await fetch(`data/stats.enc.json?h=${Math.floor(Date.now()/3600e3)}`,{cache:"no-store"});
+  if(r.status===404) throw new Error("まだ設定されていません");
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return await decryptBox(await r.json(),pass);
+}
+function srvUsable(){ // stats belong to an AMeDAS station near the place being viewed
+  return srvStats?.station && distKm(place.lat,place.lon,srvStats.station.lat,srvStats.station.lon)<=30 ? srvStats : null;
+}
+function modelWeight(md){
+  const sv=srvUsable();
+  if(sv){ // rain skill (CSI, or accuracy when no rain yet) relative to the other models, from ≥30 scored hours
+    const ms=Object.values(sv.models).filter(m=>m.nr>=30); const m=sv.models[md.key];
+    if(m && m.nr>=30 && ms.length>=2){
+      const sc=x=>x.csi ?? x.acc ?? null; const vals=ms.map(sc).filter(v=>v!=null); const mine=sc(m);
+      if(mine!=null && vals.length){ const avg=vals.reduce((a,b)=>a+b,0)/vals.length; if(avg>0) return md.w*Math.max(0.5,Math.min(2,mine/avg)); }
+    }
+  }
+  const s=verStats().m[md.key]; if(!s || s.nh<8 || s.hit==null) return md.w;
+  return md.w*Math.max(0.5,Math.min(2, (s.hit-0.5)/0.3+1));
+}
+// bias-corrected, skill-weighted temperature from the four models' hourly forecasts
+function correctedTemps(models,now){
+  const sv=srvUsable(); if(!sv) return null;
+  const todOf=ms=>{ const h=jstParts(ms).h; return h<6?"night":h<12?"morning":h<18?"afternoon":"evening"; };
+  const binOf=lead=> lead<=6?"1-6":lead<=12?"7-12":"13-24";
+  const out=[];
+  for(let k=1;k<=36;k++){
+    const t=Math.floor(now/3600e3)*3600e3+k*3600e3; let ws=0, sum=0, raw=0, rn=0;
+    MODELS.forEach(md=>{
+      const h=models[md.key]?.hourly; const m=sv.models[md.key]; if(!h) return;
+      const i=h.times.findIndex(x=>x===t); if(i<0||h.temp?.[i]==null) return;
+      raw+=h.temp[i]; rn++;
+      if(!m || m.n<24 || m.mae==null) return;
+      const lb=m.byLead?.[binOf(Math.min(k,24))], tb=m.byTod?.[todOf(t)];
+      const bias=(lb?.bias ?? m.bias) + ((tb && tb.n>=12) ? tb.bias - m.bias : 0);
+      const mae=Math.max(0.3, lb?.mae ?? m.mae); const w=1/(mae*mae);
+      ws+=w; sum+=w*(h.temp[i]-bias);
+    });
+    if(ws>0) out.push({t, v:sum/ws, raw: rn? raw/rn : null});
+  }
+  if(!out.length) return null;
+  const day=d=>out.filter(x=>jstDateStr(x.t-1)===d);
+  const summary=d=>{ const a=day(d); if(a.length<6) return null; return {max:Math.max(...a.map(x=>x.v)), min:Math.min(...a.map(x=>x.v)), rawMax:Math.max(...a.map(x=>x.raw)), rawMin:Math.min(...a.map(x=>x.raw)), partial:a.length<24}; };
+  return {hours:out, today:summary(jstDateStr(now)), tomorrow:summary(jstDateStr(now+864e5))};
+}
+const TOD_JA={night:"夜中",morning:"午前",afternoon:"午後",evening:"夕方〜夜"};
+function renderVerification(){
+  const sv=srvUsable();
+  if(sv){
+    const lead=$("verLead"), sub=$("verSub"), tb=$("verTable"); lead.className="lead"; tb.textContent="";
+    const list=MODELS.map(md=>({md,m:sv.models[md.key]})).filter(x=>x.m);
+    const bt=sv.best?.temperature, br=sv.best?.rain;
+    if(!list.length || sv.hours_scored<12){ lead.textContent="自動記録中…"; sub.textContent=`${sv.station.name}のアメダスで記録を始めました(${sv.hours_scored}時間分採点済み)。1日ほどで成績が出はじめます`; return; }
+    lead.textContent = bt ? `この場所で気温がいちばん当たるのは ${MODELS.find(m=>m.key===bt)?.label}` : "自動記録中…"; lead.classList.add("ok");
+    const quirks=[];
+    list.forEach(({md,m})=>{ if(m.n>=48 && Math.abs(m.bias)>=0.7) quirks.push(`${md.label}は${Math.abs(m.bias).toFixed(1)}℃${m.bias>0?"高め":"低め"}`);
+      Object.entries(m.byTod||{}).forEach(([k,c])=>{ if(c.n>=24 && Math.abs(c.bias-m.bias)>=0.8) quirks.push(`${md.label}は${TOD_JA[k]}に${Math.abs(c.bias).toFixed(1)}℃${c.bias>0?"高め":"低め"}`); }); });
+    const corr=lastCorr?.tomorrow;
+    sub.textContent=`${sv.station.name}のアメダスで自動記録(${sv.days_recorded}日分・${sv.hours_scored}時間を採点)`
+      + (br?`。雨は${MODELS.find(m=>m.key===br)?.label}がよく当たる`:"")
+      + (quirks.length?`。クセ: ${quirks.slice(0,3).join("、")}`:"")
+      + (corr?`。補正したあしたの最高 ${corr.max.toFixed(1)}℃ / 最低 ${corr.min.toFixed(1)}℃(補正前 ${corr.rawMax.toFixed(1)} / ${corr.rawMin.toFixed(1)}℃)`:"");
+    const t=el("table","vt"); t.innerHTML="<tr><th>モデル</th><th>気温のずれ</th><th>クセ</th><th>雨の当たり</th><th>件数</th></tr>";
+    list.forEach(({md,m})=>{ const tr=document.createElement("tr"); if(md.key===bt) tr.className="best";
+      [md.label, m.mae!=null?`±${m.mae.toFixed(1)}℃`:"–", m.bias!=null?`${m.bias>=0?"+":""}${m.bias.toFixed(1)}℃`:"–",
+       m.csi!=null?`${Math.round(m.csi*100)}%`:(m.acc!=null?`${Math.round(m.acc*100)}%*`:"–"), `${m.nr||m.n}`].forEach(v=>tr.appendChild(el("td",null,v)));
+      t.appendChild(tr); });
+    tb.appendChild(t);
+    tb.appendChild(el("div","note2",`気温のずれ=予報と実測の差の平均。雨の当たり=「雨を予想した or 実際に降った」時間のうち、予想も実際も雨だった割合(*は雨がまだ少ないため正解率)。更新 ${hm(new Date(Date.parse(sv.updated)))}。`));
+    return;
+  }
+  if(srvErr) { /* fall back to device-local records */ }
+  renderLocalVerification();
+}
+function renderLocalVerification(){
+  const vs=verStats(), lead=$("verLead"), sub=$("verSub"), tb=$("verTable"); lead.className="lead"; tb.textContent="";
+  const list=MODELS.map(md=>({md,s:vs.m[md.key]})).filter(x=>x.s && x.s.n>0);
+  const auto = srvStats && !srvUsable() ? `(自動記録は${srvStats.station?.name}付近の地点用のため、この場所ではiPhone内の記録を使っています)` : srvErr ? `(自動記録は使っていません: ${srvErr}。iPhone内の記録を使っています)` : "";
+  if(vs.checks<3 || !list.length){ lead.textContent="記録中…"; sub.textContent=`いま${vs.checks}回採点済み。時間をあけて何回か開くと、この場所でどのモデルがよく当たるかがわかってきます${auto}`; return; }
+  const best=list.filter(x=>x.s.n>=3).sort((a,b)=>a.s.mae-b.s.mae)[0];
+  lead.textContent = best ? `この場所でいちばん当たっているのは ${best.md.label}` : "記録中…"; lead.classList.add("ok");
+  const quirks=list.filter(x=>x.s.n>=5 && Math.abs(x.s.bias)>=0.8).map(x=>`${x.md.label}は${Math.abs(x.s.bias).toFixed(1)}℃${x.s.bias>0?"高め":"低め"}`);
+  sub.textContent=`${vs.checks}回採点(3〜24時間前の予報とアメダスの実測を比較)`+(quirks.length?`。クセ: ${quirks.join("、")}に出がち`:"")+auto;
+  const t=el("table","vt"); t.innerHTML="<tr><th>モデル</th><th>気温のずれ</th><th>クセ</th><th>雨の的中</th><th>回数</th></tr>";
+  list.forEach(({md,s})=>{ const tr=document.createElement("tr"); if(best&&md.key===best.md.key) tr.className="best";
+    [md.label, s.mae!=null?`±${s.mae.toFixed(1)}℃`:"–", s.bias!=null?`${s.bias>=0?"+":""}${s.bias.toFixed(1)}℃`:"–", s.hit!=null?`${Math.round(s.hit*100)}%`:"–", `${s.n}`].forEach(v=>tr.appendChild(el("td",null,v)));
+    t.appendChild(tr); });
+  tb.appendChild(t);
+}
+
+// ---------- family away from home ----------
+let family = (()=>{ try{ const v=JSON.parse(load("ab-family")||"[]"); return Array.isArray(v)?v.filter(x=>x&&x.who&&isFinite(x.lat)&&isFinite(x.lon)).slice(0,3):[]; }catch(e){ return []; } })();
+const famCache = new Map(); // key → {at, data}
+async function fetchBrief(lat,lon){
+  const key=lat.toFixed(3)+","+lon.toFixed(3); const c=famCache.get(key);
+  if(c && Date.now()-c.at<10*MIN) return c.data;
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`+
+    `&current=temperature_2m,weather_code,apparent_temperature,wind_speed_10m`+
+    `&hourly=pressure_msl&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,uv_index_max`+
+    `&wind_speed_unit=ms&timezone=Asia%2FTokyo&forecast_days=2`;
+  const d=await getJSON(u); famCache.set(key,{at:Date.now(),data:d}); return d;
+}
+const isRain = c => c!=null && ((c>=51&&c<=67)||(c>=80&&c<=82));
+const isSnow = c => c!=null && ((c>=71&&c<=77)||c===85||c===86);
+const isBolt = c => c!=null && c>=95;
+function pressDrop(d){
+  const h=d?.hourly; if(!h?.pressure_msl) return null;
+  const k=jstKey(Date.now()).slice(0,13); const i=h.time.findIndex(t=>t.slice(0,13)===k); if(i<0) return null;
+  const a=h.pressure_msl[i], b=h.pressure_msl[Math.min(h.pressure_msl.length-1,i+24)]; return (a!=null&&b!=null)? b-a : null;
+}
+// conversation points: what to say on the phone, most important first
+function talkPoints(there,home){
+  const out=[]; const D=there.daily, H=home?.daily;
+  const c0=D.weather_code?.[0], c1=D.weather_code?.[1], pp0=D.precipitation_probability_max?.[0]??0, ps0=D.precipitation_sum?.[0]??0;
+  const hc0=H?.weather_code?.[0];
+  if(isBolt(c0)) out.push([10,"雷の予報が出てるよ。外にいるときは建物の中に入ってね"]);
+  if(ps0>=30) out.push([9,"大雨になりそう。移動のときは足元と電車の遅れに気をつけてね"]);
+  if(isSnow(c0)) out.push([9,"雪の予報だよ。すべらない靴で、足元に気をつけてね"]);
+  else if(isRain(c0)||pp0>=60) out.push([7, (hc0!=null && !isRain(hc0) && (H?.precipitation_probability_max?.[0]??0)<40) ? "こっちは雨じゃないけど、そっちは雨みたい。傘は持ってる?" : "今日は雨みたい。傘は持ってる?"]);
+  const wmax=D.wind_speed_10m_max?.[0]; if(wmax!=null && wmax>=10) out.push([8,`風がかなり強い予報(最大${Math.round(wmax)}m/s)。電車や飛行機の遅れに気をつけてね`]);
+  const tmin=D.temperature_2m_min?.[0], tmax=D.temperature_2m_max?.[0], hmin=H?.temperature_2m_min?.[0], hmax=H?.temperature_2m_max?.[0];
+  if(tmin!=null && hmin!=null && tmin-hmin<=-3) out.push([6,`朝晩はこっちより${Math.round(hmin-tmin)}℃くらい寒いよ。上着はある?`]);
+  else if(tmax!=null && hmax!=null && tmax-hmax>=3) out.push([4,`こっちより${Math.round(tmax-hmax)}℃くらい暖かいね。脱ぎ着しやすい服がいいかも`]);
+  if(tmax!=null && tmax>=30) out.push([7,`最高${Math.round(tmax)}℃の暑さ。水分をこまめにとってね`]);
+  else if(tmin!=null && tmin<=3) out.push([5,`朝は${Math.round(tmin)}℃まで冷えるよ。暖かくして寝てね`]);
+  const pd=pressDrop(there); if(pd!=null && pd<=-6) out.push([6,"気圧がぐっと下がるみたい。頭痛や疲れは大丈夫?"]);
+  const uv=D.uv_index_max?.[0]; if(uv!=null && uv>=6) out.push([3,"日差しが強いみたい。帽子や日焼け止めがあるといいね"]);
+  if(!isRain(c0) && !isSnow(c0) && (isRain(c1)||isSnow(c1)||(D.precipitation_probability_max?.[1]??0)>=60)) out.push([5,`あしたは${isSnow(c1)?"雪":"雨"}になりそう。帰りの移動は気をつけてね`]);
+  if(!out.length) out.push([1, home && hc0!=null && wxKind(hc0)===wxKind(c0) ? "こっちと同じようなおだやかな天気だね。体調はどう?" : "おだやかな天気みたい。お仕事おつかれさま、体調はどう?"]);
+  return out.sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>x[1]);
+}
+async function renderFamily(home){
+  const box=$("fam"); box.textContent="";
+  if(!family.length){ box.appendChild(el("div","fm-msg","出張や旅行でおでかけ中の家族と行き先を登録すると、電話で話すときの気づかいポイントをまとめます")); }
+  const cards=family.map((f,i)=>{
+    const c=el("div","fm"); const head=el("div","fm-head");
+    head.append(el("b",null,f.who), el("span",null,`${f.name}`));
+    const rm=el("button",null,"外す"); rm.type="button"; rm.setAttribute("aria-label",`${f.who}の登録を外す`);
+    rm.addEventListener("click",()=>{ family.splice(i,1); store("ab-family",JSON.stringify(family)); renderFamily(lastWeather); });
+    head.appendChild(rm); c.appendChild(head);
+    const wx=el("div","fm-wx","天気を調べています…"); c.appendChild(wx);
+    const talk=el("ul","fm-talk"); c.appendChild(talk);
+    box.appendChild(c); return {f,wx,talk};
+  });
+  await Promise.all(cards.map(async ({f,wx,talk})=>{
+    try{
+      const d=await fetchBrief(f.lat,f.lon); wx.textContent="";
+      const D=d.daily, cur=d.current;
+      wx.appendChild(icon(wxKind(D.weather_code?.[0])));
+      wx.appendChild(el("span","pill",`今日 ${wxShort(D.weather_code?.[0])}`));
+      if(D.temperature_2m_max?.[0]!=null) wx.appendChild(el("span","pill",`${Math.round(D.temperature_2m_max[0])}℃ / ${Math.round(D.temperature_2m_min[0])}℃`));
+      if(D.precipitation_probability_max?.[0]!=null) wx.appendChild(el("span","pill",`降水確率 ${D.precipitation_probability_max[0]}%`));
+      if(cur?.temperature_2m!=null) wx.appendChild(el("span","pill",`いま ${cur.temperature_2m.toFixed(0)}℃`));
+      if(D.weather_code?.[1]!=null) wx.appendChild(el("span","pill",`あした ${wxShort(D.weather_code[1])}`));
+      talkPoints(d,home).forEach(t=>talk.appendChild(el("li",null,t)));
+    }catch(e){ wx.textContent=`天気が取れなかったよ(${e.message})`; }
+  }));
+}
+function setupFamilyForm(){
+  $("famForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const who=$("famWho").value.trim(), q=$("famPlace").value.trim(), msg=$("famMsg"), cands=$("famCands"); cands.textContent="";
+    if(family.length>=3){ msg.textContent="登録は3件まで。どれかを「外す」で外してね"; return; }
+    if(!who){ msg.textContent="だれのことか、呼び名を入れてね(例: パパ)"; $("famWho").focus(); return; }
+    if(!q){ msg.textContent="行き先の市町村名を入れてね"; $("famPlace").focus(); return; }
+    msg.textContent="さがしています…";
+    try{
+      const list=await searchPlaces(q);
+      if(!list.length){ msg.textContent=`「${q}」が見つからなかったよ`; return; }
+      msg.textContent="どこかな?タップして登録してね";
+      list.slice(0,6).forEach(p=>{ const b=el("button",null,p.name); b.type="button";
+        b.addEventListener("click",()=>{
+          family.push({who, name:p.name, lat:p.lat, lon:p.lon}); store("ab-family",JSON.stringify(family));
+          cands.textContent=""; $("famWho").value=""; $("famPlace").value="";
+          msg.textContent=`${who}(${p.name})を登録したよ`; renderFamily(lastWeather);
+        }); cands.appendChild(b); });
+    }catch(err){ msg.textContent=err.message; }
+  });
+}
+
+// ---------- wind map (GSI tiles + Open-Meteo grid + AMeDAS) ----------
+const WM = {z:11, S:512, step:96}; // logical canvas size 512px, grid every 96px
+function worldPx(lat,lon,z){ const n=256*2**z, lr=lat*Math.PI/180;
+  return [(lon+180)/360*n, (1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n]; }
+function worldToLatLon(x,y,z){ const n=256*2**z; const lon=x/n*360-180;
+  const lat=Math.atan(Math.sinh(Math.PI*(1-2*y/n)))*180/Math.PI; return [lat,lon]; }
+async function fetchWindGrid(lat,lon){
+  const [cx,cy]=worldPx(lat,lon,WM.z); const pts=[];
+  for(let gy=-2;gy<=2;gy++) for(let gx=-2;gx<=2;gx++){
+    const [la,lo]=worldToLatLon(cx+gx*WM.step, cy+gy*WM.step, WM.z); pts.push({lat:+la.toFixed(4), lon:+lo.toFixed(4)});
+  }
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${pts.map(p=>p.lat).join(",")}&longitude=${pts.map(p=>p.lon).join(",")}`+
+    `&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FTokyo`;
+  const j=await getJSON(u); const arr=Array.isArray(j)?j:[j];
+  arr.forEach((r,i)=>{ if(pts[i]){ pts[i].speed=r.current?.wind_speed_10m ?? null; pts[i].dir=r.current?.wind_direction_10m ?? null; pts[i].time=r.current?.time; } });
+  return {pts:pts.filter(p=>p.speed!=null&&p.dir!=null), time:arr[0]?.current?.time};
+}
+const WIND_COLORS=[[2,"#5fc4a6"],[4,"#5aa9ec"],[6,"#8f7be8"],[8,"#f0a020"],[10,"#e8679a"],[Infinity,"#d7263d"]];
+const windColor = v => WIND_COLORS.find(([lim])=>v<lim)[1];
+const tileCache = new Map();
+function loadTile(url){
+  if(tileCache.has(url)) return tileCache.get(url);
+  const pr=new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=url; });
+  tileCache.set(url,pr); return pr;
+}
+function drawArrow(ctx,x,y,speed,dirFrom,opt){
+  const to=(dirFrom+180)*Math.PI/180; // direction the wind blows towards (0 = north)
+  const len=Math.max(opt.min||16, Math.min(opt.max||70, speed*(opt.k||9)));
+  const dx=Math.sin(to)*len/2, dy=-Math.cos(to)*len/2;
+  const x0=x-dx, y0=y-dy, x1=x+dx, y1=y+dy;
+  const head=Math.max(8,len*0.32), ang=Math.atan2(y1-y0,x1-x0);
+  const path=()=>{ ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
+    ctx.moveTo(x1,y1); ctx.lineTo(x1-head*Math.cos(ang-0.45), y1-head*Math.sin(ang-0.45));
+    ctx.moveTo(x1,y1); ctx.lineTo(x1-head*Math.cos(ang+0.45), y1-head*Math.sin(ang+0.45)); };
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=(opt.w||4)+4; path(); ctx.stroke();
+  ctx.strokeStyle=windColor(speed); ctx.lineWidth=opt.w||4; path(); ctx.stroke();
+}
+let windDrawId=0;
+async function renderWindMap(grid,gridErr,am){
+  const my=++windDrawId;
+  const cv=$("windCanvas"), ctx=cv.getContext("2d"), K=cv.width/WM.S;
+  const {lat,lon}=place; const [cx,cy]=worldPx(lat,lon,WM.z);
+  const left=cx-WM.S/2, top=cy-WM.S/2;
+  const tiles=[];
+  for(let ty=Math.floor(top/256); ty<=Math.floor((top+WM.S-1)/256); ty++)
+    for(let tx=Math.floor(left/256); tx<=Math.floor((left+WM.S-1)/256); tx++)
+      tiles.push({tx,ty,url:`https://cyberjapandata.gsi.go.jp/xyz/pale/${WM.z}/${tx}/${ty}.png`});
+  const imgs=await Promise.all(tiles.map(t=>loadTile(t.url)));
+  if(my!==windDrawId) return;
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#eef1f4"; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(K,0,0,K,0,0);
+  imgs.forEach((im,i)=>{ if(im) ctx.drawImage(im, tiles[i].tx*256-left, tiles[i].ty*256-top, 256, 256); });
+  const loaded=imgs.filter(Boolean).length;
+  // soft veil so arrows stand out
+  ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(0,0,WM.S,WM.S);
+  const toXY=(la,lo)=>{ const [x,y]=worldPx(la,lo,WM.z); return [x-left,y-top]; };
+  // model grid arrows
+  (grid?.pts||[]).forEach(p=>{ const [x,y]=toXY(p.lat,p.lon); ctx.globalAlpha=.85; drawArrow(ctx,x,y,p.speed,p.dir,{w:3.5,k:8,min:14,max:60}); ctx.globalAlpha=1; });
+  // AMeDAS observed arrows
+  const obs=(am?.winds||[]).map(w=>({...w, xy:toXY(w.lat,w.lon)})).filter(w=>w.xy[0]>8&&w.xy[0]<WM.S-8&&w.xy[1]>8&&w.xy[1]<WM.S-8);
+  obs.forEach(w=>{
+    const [x,y]=w.xy;
+    if(w.dir!=null) drawArrow(ctx,x,y,w.speed,w.dir,{w:6,k:10,min:20,max:76});
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fillStyle="#4a3550"; ctx.fill(); ctx.lineWidth=2.5; ctx.strokeStyle="#fff"; ctx.stroke();
+    ctx.font="700 12px 'Zen Maru Gothic',sans-serif"; ctx.textAlign="left"; ctx.textBaseline="middle";
+    const label=`${w.name} ${w.speed.toFixed(1)}`; ctx.lineWidth=4; ctx.strokeStyle="rgba(255,255,255,.95)"; ctx.strokeText(label,x+9,y+12); ctx.fillStyle="#4a3550"; ctx.fillText(label,x+9,y+12);
+  });
+  // selected place pin
+  const [px,py]=[WM.S/2,WM.S/2];
+  ctx.beginPath(); ctx.arc(px,py,9,0,Math.PI*2); ctx.fillStyle="#e8679a"; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2); ctx.fillStyle="#fff"; ctx.fill();
+  // scale bar (5 km) and north mark
+  const mPerPx = 40075016*Math.cos(lat*Math.PI/180)/(256*2**WM.z), barPx=5000/mPerPx;
+  ctx.fillStyle="rgba(255,255,255,.85)"; ctx.fillRect(10,WM.S-30,barPx+16,22);
+  ctx.strokeStyle="#4a3550"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(18,WM.S-14); ctx.lineTo(18+barPx,WM.S-14); ctx.stroke();
+  ctx.fillStyle="#4a3550"; ctx.font="700 11px 'Zen Maru Gothic',sans-serif"; ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillText("5km",18+barPx/2,WM.S-17);
+  ctx.fillStyle="rgba(255,255,255,.85)"; ctx.beginPath(); ctx.arc(WM.S-22,22,14,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#4a3550"; ctx.font="700 12px 'Zen Maru Gothic',sans-serif"; ctx.textBaseline="middle"; ctx.fillText("北",WM.S-22,23);
+  ctx.beginPath(); ctx.moveTo(WM.S-22,3); ctx.lineTo(WM.S-26,10); ctx.lineTo(WM.S-18,10); ctx.closePath(); ctx.fill();
+
+  const st=$("windStatus");
+  st.hidden = loaded>0;
+  if(!loaded) st.textContent="地図を読み込めませんでした(矢印だけ表示しています)";
+  // legend & source
+  const lg=$("wlegend"); lg.textContent="";
+  [["〜2","#5fc4a6"],["2〜4","#5aa9ec"],["4〜6","#8f7be8"],["6〜8","#f0a020"],["8〜10","#e8679a"],["10〜 m/s","#d7263d"]].forEach(([t,c])=>{ const sp=el("span"); const i=document.createElement("i"); i.style.background=c; sp.append(i,t); lg.appendChild(sp); });
+  const ok=el("span"); ok.append(el("span","obsk"),"アメダス実測(数字は m/s)"); lg.appendChild(ok);
+  const src=[];
+  src.push("矢印は風が吹いていく向き。長いほど強い風。細い矢印は予報モデル(Open-Meteo)の現在値");
+  if(grid?.time) src.push(`予報 ${grid.time.slice(11,16)}`); else if(gridErr) src.push(`予報の風は取れませんでした(${gridErr})`);
+  if(am) src.push(`アメダス ${hm(new Date(am.time))} 観測・${obs.length}地点`);
+  $("windSrc").textContent=src.join(" / ");
+}
+
+// ---------- place search ----------
+async function searchPlaces(q){
+  const [g,o] = await Promise.allSettled([
+    getJSON("https://msearch.gsi.go.jp/address-search/AddressSearch?q="+encodeURIComponent(q)),
+    getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=ja&countryCode=JP`)
+  ]);
+  const out=[], seen=new Set();
+  const add=(name,lat,lon,score)=>{ name=name.replace(/\s+/g,""); if(!name||seen.has(name)) return; seen.add(name); out.push({name,lat,lon,score}); };
+  if(g.status==="fulfilled" && Array.isArray(g.value)){
+    g.value.forEach(f=>{ const t=f.properties?.title||""; const [lon,lat]=f.geometry?.coordinates||[];
+      if(lat==null) return; add(t,lat,lon,(t.endsWith(q)?0:1)+t.length/100); });
+  }
+  if(o.status==="fulfilled" && o.value.results){
+    o.value.results.forEach(r=>{ const name=(r.admin1||"")+(r.name||""); add(name,r.latitude,r.longitude,(r.name===q?0.05:1.5)+name.length/100); });
+  }
+  out.sort((a,b)=>a.score-b.score);
+  if(!out.length && g.status==="rejected" && o.status==="rejected") throw new Error("地名検索に接続できませんでした");
+  return out.slice(0,8);
+}
+async function reverseName(lat,lon){
+  try{
+    const j=await getJSON(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lon}`);
+    return j.results?.lv01Nm ? `現在地(${j.results.lv01Nm}付近)` : "現在地";
+  }catch(e){ return "現在地"; }
+}
+
+// ---------- sun & moon (SunCalc algorithms by Vladimir Agafonkin, BSD-2-Clause) ----------
+const ASTRO = (() => {
+  const PI=Math.PI, sin=Math.sin, cos=Math.cos, tan=Math.tan, asin=Math.asin, atan=Math.atan2, acos=Math.acos, rad=PI/180;
+  const dayMs=864e5, J1970=2440588, J2000=2451545, e=rad*23.4397;
+  const toDays = d => d/dayMs - 0.5 + J1970 - J2000;
+  const ra = (l,b) => atan(sin(l)*cos(e) - tan(b)*sin(e), cos(l));
+  const dec = (l,b) => asin(sin(b)*cos(e) + cos(b)*sin(e)*sin(l));
+  const alt = (H,phi,d) => asin(sin(phi)*sin(d) + cos(phi)*cos(d)*cos(H));
+  const azi = (H,phi,d) => atan(sin(H), cos(H)*sin(phi) - tan(d)*cos(phi));
+  const sidereal = (d,lw) => rad*(280.16 + 360.9856235*d) - lw;
+  const refr = h => { if(h<0) h=0; return 0.0002967/Math.tan(h + 0.00312536/(h+0.08901179)); };
+  function sunCoords(d){ const M=rad*(357.5291+0.98560028*d);
+    const C=rad*(1.9148*sin(M)+0.02*sin(2*M)+0.0003*sin(3*M)); const L=M+C+rad*102.9372+PI;
+    return {dec:dec(L,0), ra:ra(L,0)}; }
+  // moon with the main periodic terms (evection, variation, annual equation…) for ~0.3° accuracy
+  function moonCoords(d){ const L=rad*(218.316+13.176396*d), M=rad*(134.963+13.064993*d), F=rad*(93.272+13.229350*d);
+    const D=rad*(297.850+12.190749*d), Ms=rad*(357.529+0.98560028*d);
+    const l=L+rad*(6.289*sin(M) + 1.274*sin(2*D-M) + 0.658*sin(2*D) + 0.214*sin(2*M) - 0.186*sin(Ms) - 0.114*sin(2*F)
+                   + 0.059*sin(2*D-2*M) + 0.057*sin(2*D-Ms-M) + 0.053*sin(2*D+M) + 0.046*sin(2*D-Ms) - 0.041*sin(Ms-M) - 0.035*sin(D) - 0.031*sin(Ms+M));
+    const b=rad*(5.128*sin(F) + 0.281*sin(M+F) + 0.278*sin(M-F) + 0.173*sin(2*D-F));
+    const dt=385001-20905*cos(M)-3699*cos(2*D-M)-2956*cos(2*D)-570*cos(2*M);
+    return {ra:ra(l,b), dec:dec(l,b), dist:dt, lon:l}; }
+  function sunLon(d){ const M=rad*(357.5291+0.98560028*d);
+    return M+rad*(1.9148*sin(M)+0.02*sin(2*M)+0.0003*sin(3*M))+rad*102.9372+PI; }
+  // phase from difference of ecliptic longitudes: 0 new, .25 first quarter, .5 full, .75 last quarter
+  function phaseLon(ms){ const d=toDays(ms); const x=(moonCoords(d).lon-sunLon(d))/(2*PI); return ((x%1)+1)%1; }
+  function moonDist(ms){ return moonCoords(toDays(ms)).dist; }
+  function sunLonDeg(ms){ const x=sunLon(toDays(ms))/rad; return ((x%360)+360)%360; }
+  // returns degrees; azimuth measured from north, clockwise (east = 90)
+  function moonPos(ms,lat,lng){ const lw=rad*-lng, phi=rad*lat, d=toDays(ms), c=moonCoords(d);
+    const H=sidereal(d,lw)-c.ra; let h=alt(H,phi,c.dec); h+=refr(h);
+    return {alt:h/rad, az:((azi(H,phi,c.dec)/rad)+180+360)%360}; }
+  function sunPos(ms,lat,lng){ const lw=rad*-lng, phi=rad*lat, d=toDays(ms), c=sunCoords(d);
+    const H=sidereal(d,lw)-c.ra; return {alt:alt(H,phi,c.dec)/rad, az:((azi(H,phi,c.dec)/rad)+180+360)%360}; }
+  function illumination(ms){ const d=toDays(ms), s=sunCoords(d), m=moonCoords(d), sdist=149598000;
+    const phi=acos(sin(s.dec)*sin(m.dec)+cos(s.dec)*cos(m.dec)*cos(s.ra-m.ra));
+    const inc=atan(sdist*sin(phi), m.dist-sdist*cos(phi));
+    const angle=atan(cos(s.dec)*sin(s.ra-m.ra), sin(s.dec)*cos(m.dec)-cos(s.dec)*sin(m.dec)*cos(s.ra-m.ra));
+    return {fraction:(1+cos(inc))/2, phase:0.5+0.5*inc*(angle<0?-1:1)/PI}; }
+  function moonTimes(t0,lat,lng){
+    const at = h => t0 + h*3600e3; const hc=0.133;
+    let h0=moonPos(at(0),lat,lng).alt*rad-hc*rad, rise, set;
+    for(let i=1;i<=24;i+=2){
+      const h1=moonPos(at(i),lat,lng).alt*rad-hc*rad, h2=moonPos(at(i+1),lat,lng).alt*rad-hc*rad;
+      const a=(h0+h2)/2-h1, b=(h2-h0)/2, xe=-b/(2*a), ye=(a*xe+b)*xe+h1, d=b*b-4*a*h1;
+      let roots=0, x1=0, x2=0;
+      if(d>=0){ const dx=Math.sqrt(d)/(Math.abs(a)*2); x1=xe-dx; x2=xe+dx;
+        if(Math.abs(x1)<=1) roots++; if(Math.abs(x2)<=1) roots++; if(x1<-1) x1=x2; }
+      if(roots===1){ if(h0<0) rise=i+x1; else set=i+x1; }
+      else if(roots===2){ rise=i+(ye<0?x2:x1); set=i+(ye<0?x1:x2); }
+      if(rise!=null && set!=null) break;
+      h0=h2;
+    }
+    return {rise: rise!=null?new Date(at(rise)):undefined, set: set!=null?new Date(at(set)):undefined};
+  }
+  return {moonPos, sunPos, illumination, moonTimes, phaseLon, moonDist, sunLonDeg};
+})();
+function jstMidnight(ms){ const j=ms+9*3600e3; return j - (j % 864e5) - 9*3600e3; }
+const DIRS=["北","北北東","北東","東北東","東","東南東","南東","南南東","南","南南西","南西","西南西","西","西北西","北西","北北西"];
+const dirName = az => DIRS[Math.round(az/22.5)%16];
+function altWord(a){ if(a<0) return "地平線の下"; if(a<10) return "地平線すれすれ"; if(a<30) return "低め"; if(a<60) return "見上げるくらい"; return "ほぼ真上"; }
+function moonName(p){
+  if(p<0.033||p>0.967) return "新月"; if(p<0.2) return "三日月"; if(p<0.3) return "上弦の月";
+  if(p<0.467) return "十三夜の月"; if(p<0.533) return "満月"; if(p<0.7) return "寝待月";
+  if(p<0.8) return "下弦の月"; return "有明月";
+}
+function moonSVG(phase,fraction,r){
+  r=r||28;
+  const g=document.createElementNS(NS,"g");
+  const base=document.createElementNS(NS,"circle"); base.setAttribute("r",r); base.setAttribute("fill","var(--moondark)"); g.appendChild(base);
+  const k=Math.cos(2*Math.PI*phase), rx=Math.abs(k)*r;
+  const lit=document.createElementNS(NS,"path");
+  lit.setAttribute("d",`M0,${-r} A${r},${r} 0 0 1 0,${r} A${rx},${r} 0 0 ${fraction<0.5?0:1} 0,${-r} Z`);
+  lit.setAttribute("fill","var(--moonlit)");
+  if(phase>0.5) lit.setAttribute("transform","scale(-1,1)");
+  g.appendChild(lit);
+  return g;
+}
+function moonIcon(phase,fraction){
+  const s=document.createElementNS(NS,"svg"); s.setAttribute("viewBox","-32 -32 64 64"); s.setAttribute("aria-hidden","true");
+  s.appendChild(moonSVG(phase,fraction,28)); return s;
+}
+function cloudAt(w,ms){
+  if(!w || !w.hourly || !w.hourly.cloud_cover) return null;
+  const key=jstKey(ms).slice(0,13); const i=w.hourly.time.findIndex(t=>t.slice(0,13)===key);
+  return i>=0 ? w.hourly.cloud_cover[i] : null;
+}
+// visibility verdict for a moment
+function moonVisibility(mp,sp,ill,cloud){
+  if(mp.alt<=0) return {cls:"no", text:"いまは地平線の下にいるよ"};
+  if(ill.fraction<0.05) return {cls:"no", text:"新月の近くで細すぎて、見つけるのは難しそう"};
+  if(sp.alt>-6){
+    if(ill.fraction>=0.3 && mp.alt>=15 && (cloud==null||cloud<60)) return {cls:"maybe", text:"空が明るいけど、白っぽい月が見えるかも"};
+    return {cls:"no", text:"空が明るくて見えにくいよ"};
+  }
+  if(cloud!=null && cloud>=85) return {cls:"no", text:"雲が多くて見えにくそう"};
+  if(cloud!=null && cloud>=50) return {cls:"maybe", text:"雲のすき間から見えるかも"};
+  if(mp.alt<10) return {cls:"maybe", text:"低いので、建物や山にかくれるかも"};
+  return {cls:"good", text:"見えそう!お空を見てみてね"};
+}
+// next window with moon ≥10° and sky dark, within 24h
+function nextGoodMoon(now,lat,lon){
+  let inWin=false, best=null;
+  for(let m=0;m<=24*60;m+=10){
+    const t=now+m*MIN; const mp=ASTRO.moonPos(t,lat,lon), sp=ASTRO.sunPos(t,lat,lon);
+    const ok = mp.alt>=10 && sp.alt<-6;
+    if(ok){ inWin=true; if(!best||mp.alt>best.alt) best={t,alt:mp.alt,az:mp.az,start:best?best.start:t}; }
+    else if(inWin) break;
+  }
+  return best;
+}
+
+// Approximate planetary positions: JPL "Keplerian Elements for Approximate Positions" (1800–2050), table 1
+const PLANETS = (() => {
+  const rad=Math.PI/180, eps=23.43928*rad;
+  const EL = {
+    mercury:[0.38709927,0.00000037,0.20563593,0.00001906,7.00497902,-0.00594749,252.25032350,149472.67411175,77.45779628,0.16047689,48.33076593,-0.12534081],
+    venus:[0.72333566,0.00000390,0.00677672,-0.00004107,3.39467605,-0.00078890,181.97909950,58517.81538729,131.60246718,0.00268329,76.67984255,-0.27769418],
+    earth:[1.00000261,0.00000562,0.01671123,-0.00004392,-0.00001531,-0.01294668,100.46457166,35999.37244981,102.93768193,0.32327364,0,0],
+    mars:[1.52371034,0.00001847,0.09339410,0.00007882,1.84969142,-0.00813131,-4.55343205,19140.30268499,-23.94362959,0.44441088,49.55953891,-0.29257343],
+    jupiter:[5.20288700,-0.00011607,0.04838624,-0.00013253,1.30439695,-0.00183714,34.39644051,3034.74612775,14.72847983,0.21252668,100.47390909,0.20469106],
+    saturn:[9.53667594,-0.00125060,0.05386179,-0.00050991,2.48599187,0.00193609,49.95424423,1222.49362201,92.59887831,-0.41897216,113.66242448,-0.28867794],
+  };
+  function helio(name,T){
+    const p=EL[name];
+    const a=p[0]+p[1]*T, e=p[2]+p[3]*T, I=(p[4]+p[5]*T)*rad, L=p[6]+p[7]*T, w=p[8]+p[9]*T, O=(p[10]+p[11]*T)*rad;
+    let M=((L-w)%360+540)%360-180; M*=rad; const om=w*rad-O;
+    let E=M+e*Math.sin(M); for(let k=0;k<8;k++) E-= (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+    const xp=a*(Math.cos(E)-e), yp=a*Math.sqrt(1-e*e)*Math.sin(E);
+    const co=Math.cos(om), so=Math.sin(om), cO=Math.cos(O), sO=Math.sin(O), cI=Math.cos(I), sI=Math.sin(I);
+    return [(co*cO-so*sO*cI)*xp+(-so*cO-co*sO*cI)*yp, (co*sO+so*cO*cI)*xp+(-so*sO+co*cO*cI)*yp, (so*sI)*xp+(co*sI)*yp];
+  }
+  // returns {ra, dec (radians), dist (au), r (au from sun), elong (deg from sun)}
+  function geo(name,ms){
+    const T=(ms/864e5+2440587.5-2451545)/36525;
+    const P=helio(name,T), Ea=helio("earth",T);
+    const x=P[0]-Ea[0], y=P[1]-Ea[1], z=P[2]-Ea[2];
+    const xe=x, ye=y*Math.cos(eps)-z*Math.sin(eps), ze=y*Math.sin(eps)+z*Math.cos(eps);
+    const dist=Math.hypot(x,y,z), r=Math.hypot(...P);
+    // elongation: angle between sun (-Ea) and planet as seen from earth
+    const sx=-Ea[0], sy=-Ea[1], sz=-Ea[2];
+    const cosEl=(x*sx+y*sy+z*sz)/(dist*Math.hypot(sx,sy,sz));
+    return {ra:Math.atan2(ye,xe), dec:Math.atan2(ze,Math.hypot(xe,ye)), dist, r, elong:Math.acos(Math.max(-1,Math.min(1,cosEl)))/rad};
+  }
+  function altAz(name,ms,lat,lng){
+    const g=geo(name,ms); const d=ms/864e5-0.5+2440588-2451545;
+    const lw=rad*-lng, phi=rad*lat, H=rad*(280.16+360.9856235*d)-lw-g.ra;
+    const alt=Math.asin(Math.sin(phi)*Math.sin(g.dec)+Math.cos(phi)*Math.cos(g.dec)*Math.cos(H));
+    const az=Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(phi)-Math.tan(g.dec)*Math.cos(phi));
+    return {alt:alt/rad, az:((az/rad)+180+360)%360, dist:g.dist, r:g.r, elong:g.elong};
+  }
+  return {geo, altAz};
+})();
+
+// ---------- sky events (JST dates). Sources: 国立天文台 暦要項 2026/2027, 暦計算室 ----------
+const SEKKI_DESC = {
+  "小寒":"寒の入り。寒さがいっそう厳しくなるころ","大寒":"一年でいちばん寒いころ","立春":"暦の上では春のはじまり","雨水":"雪が雨に変わりはじめるころ",
+  "啓蟄":"土の中の虫が目を覚ますころ","春分":"昼と夜の長さがほぼ同じ日","清明":"草木が明るく生き生きするころ","穀雨":"穀物をうるおす春の雨のころ",
+  "立夏":"暦の上では夏のはじまり","小満":"草木がぐんぐん育つころ","芒種":"田植えのころ","夏至":"一年でいちばん昼が長い日",
+  "小暑":"本格的な暑さが近づくころ","大暑":"一年でいちばん暑いころ","立秋":"暦の上では秋のはじまり","処暑":"暑さがやわらぐころ",
+  "白露":"草に朝露が光るころ","秋分":"昼と夜の長さがほぼ同じ日","寒露":"朝晩がひんやりしてくるころ","霜降":"霜がおりはじめるころ",
+  "立冬":"暦の上では冬のはじまり","小雪":"山に初雪が見られるころ","大雪":"雪が本格的に降りはじめるころ","冬至":"一年でいちばん昼が短い日"
+};
+const SEKKI = {
+  2026:{ "11-07":"立冬","11-22":"小雪","12-07":"大雪","12-22":"冬至" },
+  2027:{ "01-05":"小寒","01-20":"大寒","02-04":"立春","02-19":"雨水","03-06":"啓蟄","03-21":"春分","04-05":"清明","04-20":"穀雨",
+         "05-06":"立夏","05-21":"小満","06-06":"芒種","06-21":"夏至","07-07":"小暑","07-23":"大暑","08-08":"立秋","08-23":"処暑",
+         "09-08":"白露","09-23":"秋分","10-08":"寒露","10-24":"霜降","11-08":"立冬","11-22":"小雪","12-07":"大雪","12-22":"冬至" }
+};
+const EVENTS_FIXED = [
+  ["2026-11-06","meteor","南おうし座流星群のピーク","ゆっくり流れる明るい流星が見られることがあります。数は1時間に数個ほど",false],
+  ["2026-11-13","meteor","北おうし座流星群のピーク","ゆっくり流れる流星が見られます。数は1時間に数個ほど",false],
+  ["2026-11-18","meteor","しし座流星群のピーク","18日の9時ごろがピーク。17日の夜遅くから18日の明け方にかけてが見ごろです",true],
+  ["2026-11-21","planet","水星が金星の近くに","明け方、東の低い空に並んで見えます。日の出のあとは太陽を見ないように気をつけてね",false],
+  ["2026-11-26","planet","天王星がいちばん見やすい日","地球をはさんで太陽の反対側に来る日(「衝(しょう)」といいます)で、一晩中空にあり、一年でいちばん見やすくなります。とても暗い星なので、暗い場所で双眼鏡を使うと青緑色の小さな星のように見えます",false],
+  ["2026-12-14","meteor","ふたご座流星群のピーク","14日の23時ごろがピーク。三大流星群のひとつで、たくさんの流れ星が見られます",true],
+  ["2026-12-23","meteor","こぐま座流星群のピーク","23日の7時ごろがピーク。数は1時間に数個ほどです",false],
+  ["2027-01-04","meteor","しぶんぎ座流星群のピーク","4日の6時ごろがピーク。三大流星群のひとつで、明け方が見ごろです",true],
+  ["2027-02-03","festival","節分","",false],
+  ["2027-02-07","eclipse","金環日食","太陽がリングのように見える日食です。南米などで見られ、日本からは見えません",true],
+  ["2027-02-20","planet","火星がいちばん明るく見える日","地球をはさんで太陽の反対側に来る日(「衝(しょう)」といいます)で、赤く明るい火星が一晩中見えます。約2年2か月に1度のチャンスです",true],
+  ["2027-04-22","meteor","こと座流星群のピーク(ごろ)","夜中すぎから明け方にかけてが見ごろです",false],
+  ["2027-05-06","meteor","みずがめ座η流星群のピーク(ごろ)","明け方の東の空で見られます",false],
+  ["2027-07-07","festival","七夕","おりひめ星(ベガ)とひこ星(アルタイル)を探してみよう",true],
+  ["2027-07-30","meteor","みずがめ座δ南流星群のピーク(ごろ)","数は1時間に数個ほどです",false],
+  ["2027-08-02","eclipse","皆既日食","北アフリカなどで、皆既が6分をこえる長い日食が見られます。日本からは見えません",true],
+  ["2027-08-13","meteor","ペルセウス座流星群のピーク(ごろ)","三大流星群のひとつで、夏休みの夜空の主役です",true],
+  ["2027-09-15","festival","中秋の名月","お月見の日です。おだんごを用意して、まんまるのお月さまを見よう",true],
+  ["2027-10-21","meteor","オリオン座流星群のピーク(ごろ)","夜中すぎが見ごろです",false],
+  ["2027-11-18","meteor","しし座流星群のピーク(ごろ)","夜中すぎから明け方にかけてが見ごろです",false],
+  ["2027-12-14","meteor","ふたご座流星群のピーク(ごろ)","三大流星群のひとつです",true],
+  ["2027-12-22","meteor","こぐま座流星群のピーク(ごろ)","数は1時間に数個ほどです",false],
+];
+const EVENTS_YEARLY = [ // used for 2028 and later
+  ["01-04","meteor","しぶんぎ座流星群のピーク(ごろ)","三大流星群のひとつです",true],
+  ["04-22","meteor","こと座流星群のピーク(ごろ)","夜中すぎから明け方にかけてが見ごろです",false],
+  ["05-06","meteor","みずがめ座η流星群のピーク(ごろ)","明け方の東の空で見られます",false],
+  ["07-07","festival","七夕","おりひめ星とひこ星を探してみよう",true],
+  ["08-13","meteor","ペルセウス座流星群のピーク(ごろ)","三大流星群のひとつです",true],
+  ["10-21","meteor","オリオン座流星群のピーク(ごろ)","夜中すぎが見ごろです",false],
+  ["11-18","meteor","しし座流星群のピーク(ごろ)","夜中すぎから明け方にかけてが見ごろです",false],
+  ["12-14","meteor","ふたご座流星群のピーク(ごろ)","三大流星群のひとつです",true],
+];
+const KIND = {
+  meteor:["流星群","var(--lav)"], eclipse:["日食・月食","var(--accent)"], planet:["惑星","var(--sky)"],
+  festival:["行事","var(--pink)"], season:["季節","var(--mint)"], moon:["月","var(--butter)"]
+};
+const pad = n => String(n).padStart(2,"0");
+function jstParts(ms){ const d=new Date(ms+9*3600e3); return {y:d.getUTCFullYear(), m:d.getUTCMonth()+1, d:d.getUTCDate(), h:d.getUTCHours(), mi:d.getUTCMinutes()}; }
+const jstDateStr = ms => { const p=jstParts(ms); return `${p.y}-${pad(p.m)}-${pad(p.d)}`; };
+
+const moonPhaseCache = {};
+function moonPhaseEvents(y,m){ // new / first quarter / full / last quarter in a JST month
+  const key=y+"-"+m; if(moonPhaseCache[key]) return moonPhaseCache[key];
+  const start=Date.UTC(y,m-1,1)-9*3600e3-864e5, end=Date.UTC(y,m,1)-9*3600e3+864e5;
+  const out=[]; let prev=ASTRO.phaseLon(start);
+  for(let t=start+600e3;t<=end;t+=600e3){
+    const p=ASTRO.phaseLon(t);
+    const hit = v => v===0 ? (prev>0.9&&p<0.1) : (prev<v&&p>=v);
+    for(const [v,name] of [[0,"新月"],[0.25,"上弦の月"],[0.5,"満月"],[0.75,"下弦の月"]]){
+      if(hit(v)){ const jp=jstParts(t); if(jp.y===y&&jp.m===m) out.push({t,name,dist:ASTRO.moonDist(t)}); }
+    }
+    prev=p;
+  }
+  return (moonPhaseCache[key]=out);
+}
+function eventsOfMonth(y,m){
+  const list=[];
+  const mm=pad(m);
+  EVENTS_FIXED.forEach(([d,k,t,n,big])=>{ if(d.startsWith(`${y}-${mm}`)) list.push({date:d,kind:k,title:t,note:n,big}); });
+  if(y>=2028) EVENTS_YEARLY.forEach(([d,k,t,n,big])=>{ if(d.startsWith(mm)) list.push({date:`${y}-${d}`,kind:k,title:t,note:n,big}); });
+  const sk=SEKKI[y]||{};
+  Object.entries(sk).forEach(([d,name])=>{ if(d.startsWith(mm)) list.push({date:`${y}-${d}`,kind:"season",title:name,note:SEKKI_DESC[name]||"",big:["春分","夏至","秋分","冬至"].includes(name)}); });
+  if(y!==2027 && m===7 && y<2028) list.push({date:`${y}-07-07`,kind:"festival",title:"七夕",note:"おりひめ星とひこ星を探してみよう",big:true});
+  moonPhaseEvents(y,m).forEach(e=>{
+    const jp=jstParts(e.t); const big=e.name==="満月"||e.name==="新月";
+    let note=`${jp.h}時ごろ`;
+    if(e.name==="満月" && e.dist<362000) note+="。地球に近く、大きめに見える満月";
+    if(e.name==="新月") note+="。月明かりがなく、星を見るのにぴったりの時期";
+    list.push({date:jstDateStr(e.t),kind:"moon",title:e.name,note,big:false,minor:!big});
+  });
+  list.sort((a,b)=>a.date.localeCompare(b.date) || (a.minor?1:0)-(b.minor?1:0));
+  return list;
+}
+// moon light on a given night (around midnight JST of that date's evening)
+function moonLightOn(dateStr){
+  const [y,m,d]=dateStr.split("-").map(Number);
+  const t=Date.UTC(y,m-1,d,15)-9*3600e3+ 9*3600e3; // 15:00 UTC = 24:00 JST
+  const f=ASTRO.illumination(t).fraction;
+  return f<0.3?"月明かりが少なく、好条件":f<0.7?"月明かりが少しじゃま":"明るい月があって条件はいまひとつ";
+}
+
+// ---------- sun rise/set by scanning (minutes) ----------
+function sunTimes(t0,lat,lon){
+  let rise=null,set=null,prev=ASTRO.sunPos(t0,lat,lon).alt+0.833;
+  for(let m=2;m<=1440;m+=2){ const t=t0+m*MIN, a=ASTRO.sunPos(t,lat,lon).alt+0.833;
+    const cross = t-2*MIN + (2*MIN)*(prev/(prev-a)); // linear interpolation of the crossing time
+    if(prev<0&&a>=0&&rise==null) rise=cross; if(prev>=0&&a<0&&set==null) set=cross; prev=a; }
+  return {rise,set,len: rise&&set? set-rise : null};
+}
+
+// ---------- planets tonight ----------
+const PL_NAMES = {mercury:"水星",venus:"金星",mars:"火星",jupiter:"木星",saturn:"土星"};
+function planetsTonight(now,lat,lon){
+  // collect dark samples from now until the next sunrise after darkness
+  const samples=[]; let wasDark=false;
+  for(let m=0;m<=20*60;m+=15){
+    const t=now+m*MIN; const sa=ASTRO.sunPos(t,lat,lon).alt; const dark=sa<-8;
+    if(dark){ wasDark=true; samples.push(t); } else if(wasDark) break;
+  }
+  if(!samples.length) return {list:[],start:null,end:null};
+  const start=samples[0], end=samples[samples.length-1], mid=(start+end)/2;
+  const list=[];
+  for(const key of Object.keys(PL_NAMES)){
+    const minAlt = key==="mercury"?4:8;
+    let best=null, first=null, last=null;
+    samples.forEach(t=>{ const p=PLANETS.altAz(key,t,lat,lon); if(p.alt>=minAlt){ if(first==null) first=t; last=t; if(!best||p.alt>best.alt) best={...p,t}; } });
+    if(!best) continue;
+    const atStart=first-start<=30*MIN, atEnd=end-last<=30*MIN;
+    const fh=t=>`${jstParts(t).h}時`;
+    let when;
+    if(atStart&&atEnd) when="一晩中";
+    else if(atStart) when=`夕方から${fh(last)}ごろまで`;
+    else if(atEnd) when=`${fh(first)}ごろから明け方まで`;
+    else when=`${fh(first)}〜${fh(last)}ごろ`;
+    let nick="";
+    if(key==="venus") nick = (atEnd&&first>=mid) ? "明けの明星" : ((atStart&&last<=mid) ? "宵の明星" : "");
+    const g=PLANETS.geo(key,best.t);
+    const bright = key==="venus"?"とても明るい": key==="jupiter"?"とても明るい": key==="mars"?(g.dist<0.8?"赤くとても明るい":g.dist<1.5?"赤くて明るめ":"赤っぽい"): key==="saturn"?"明るめ":"低くて見つけにくい";
+    list.push({key,name:PL_NAMES[key],nick,when,best,bright,shown:key==="mercury"?first:best.t});
+  }
+  return {list,start,end};
+}
+
+const CONSTELLATION = {
+  1:"冬の大三角(ベテルギウス・シリウス・プロキオン)が南の空に",
+  2:"いちばん明るい星シリウスが南の空でキラキラ",
+  3:"北斗七星が北東の空に高くのぼってきます",
+  4:"春の大曲線:北斗七星の柄をのばしてアークトゥルス、スピカへ",
+  5:"春の大三角(アークトゥルス・スピカ・デネボラ)が南の空に",
+  6:"南の低い空に、さそり座の赤い星アンタレス",
+  7:"夏の大三角(ベガ・アルタイル・デネブ)。おりひめ星とひこ星を探してみよう",
+  8:"夏の大三角が頭の上に。暗い場所なら天の川も見えるかも",
+  9:"夏の大三角が西へ、秋の四辺形(ペガスス座)が東からのぼります",
+  10:"秋の四辺形と、W字のカシオペヤ座が北の空に",
+  11:"すばる(プレアデス星団)が東の空に。小さな星の集まりを探してみよう",
+  12:"オリオン座が東の空からのぼってきます。3つ並んだ星が目印",
+};
+
+function topicLi(color,mark,title,body){
+  const li=el("li"); const ic=el("div","ic",mark); ic.style.background=color;
+  const tx=el("div"); tx.append(el("b",null,title)); if(body) tx.append(el("span",null,body));
+  li.append(ic,tx); return li;
+}
+
+// ---------- blend ----------
+function blend(start,models,nc,yh){
+  const rows=[];
+  for(let k=-PAST;k<SLOTS;k++){
+    const t=start+k*STEP*MIN, lead=k*STEP;
+    const mv={}; let ws=0,sum=0,wet=0;
+    for(const md of MODELS){
+      const v=sampleSeries(models[md.key],t); mv[md.key]=v;
+      const mw=md._w??md.w; if(v!=null){ws+=mw; sum+=mw*v; if(v>=RAIN) wet+=mw;}
+    }
+    const n=samplePts(nc,t), y=samplePts(yh,t);
+    const radar=[n,y].filter(v=>v!=null);
+    let val=null, agree=null;
+    const modelAvg = ws? sum/ws : null;
+    if(radar.length){
+      const rv = radar.reduce((a,b)=>a+b,0)/radar.length;
+      const wn = lead<=0 ? 0.97 : Math.max(0.5, 0.95 - lead/60*0.45); // past: radar observation dominates
+      val = modelAvg==null ? rv : wn*rv + (1-wn)*modelAvg;
+      const nw = 3*wn/(1-wn);
+      const rwet = radar.filter(v=>v>=RAIN).length/radar.length;
+      agree = (wet + rwet*nw) / (ws + nw);
+    } else if(modelAvg!=null){ val=modelAvg; agree=wet/ws; }
+    rows.push({t,lead,val,agree,n,y,mv});
+  }
+  return rows;
+}
+
+// ---------- render: rain ----------
+function renderRain(rows,src,w){
+  const strip=$("strip"), ticks=$("ticks"), tb=$("tbody");
+  strip.textContent=""; ticks.textContent=""; tb.textContent="";
+  const max=Math.max(5,...rows.map(r=>r.val||0));
+  rows.forEach((r,i)=>{
+    const b=el("div","bar"+(r.lead===0?" now":r.lead<0?" past":""));
+    const v=r.val||0; b.style.height = v<RAIN? "6px" : `${Math.max(14,Math.sqrt(v/max)*100)}%`;
+    b.style.background=colorFor(v); b.title=`${hm(new Date(r.t))}  ${fmt(r.val)} mm/h`;
+    strip.appendChild(b);
+    ticks.appendChild(el("span", r.lead===0?"nowt":null, r.lead===0?"いま": (r.lead%15===0 ? (r.lead<0?`${-r.lead}分前`:`${r.lead}分後`) : "")));
+    const tr=document.createElement("tr");
+    [hm(new Date(r.t)), fmt(r.val), r.agree==null?"–":Math.round(r.agree*100)+"%", fmt(r.n), fmt(r.y), ...MODELS.map(m=>fmt(r.mv[m.key]))]
+      .forEach(c=>tr.appendChild(el("td",null,c)));
+    tb.appendChild(tr);
+  });
+
+  const allRows = rows; rows = rows.filter(r=>r.lead>=0);
+  const wetIdx = rows.findIndex(r=>(r.val||0)>=RAIN);
+  const peak = rows.reduce((a,r)=>(r.val||0)>(a.val||0)?r:a, rows[0]);
+  const pastWetRows = allRows.filter(r=>r.lead<0 && (r.val||0)>=RAIN); const pastWet=pastWetRows.length;
+  const pastMax = pastWet? Math.max(...pastWetRows.map(r=>r.val)) : 0;
+  let msg, sub="", kind;
+  if(rows.every(r=>r.val==null)){ msg="雨のデータが取れなかったよ"; sub="下の「くわしいデータ」で理由を見てね"; kind="cloud"; }
+  else if(wetIdx===-1){ msg="30分は雨の心配なし"; sub= pastWet? (pastMax<1 ? "さっきまで弱い雨がパラついていたみたい(雨雲レーダー)。もうやみそう" : "さっきまで降っていたけど、もうやみそう") : "傘はいらなさそう"; kind = w&&w.current ? wxKind(w.current.weather_code) : "sun"; if(kind==="rain"||kind==="bolt") kind="cloud"; }
+  else if(wetIdx===0){
+    const stop = rows.findIndex(r=>(r.val||0)<RAIN);
+    msg = stop===-1 ? `いま${word(rows[0].val)}。しばらく続きそう` : `いま${word(rows[0].val)}。${hm(new Date(rows[stop].t))}ごろやみそう`;
+    sub="傘を持っていってね"; kind="rain";
+  } else { msg=`${rows[wetIdx].lead}分後ごろから${word(rows[wetIdx].val)}`; sub=`${hm(new Date(rows[wetIdx].t))}ごろから。傘を持っていってね`; kind="rain"; }
+  // agreement = share of sources backing this verdict (rain → share predicting rain, no rain → share predicting dry)
+  const a = wetIdx===-1? (rows[0].agree==null?null:1-Math.max(...rows.map(r=>r.agree??0))) : rows[wetIdx].agree;
+  if(a!=null) sub += `(予報の一致度 ${Math.round(a*100)}%)`;
+  if(wetIdx>=0 && peak.val>=1) sub += `・いちばん強いのは${hm(new Date(peak.t))}ごろ`;
+  $("verdict").textContent=msg; $("vmeta").textContent=sub;
+  const hi=$("heroIcon"); hi.textContent=""; hi.appendChild(icon(kind));
+
+  const s=$("src"); s.textContent="";
+  src.forEach(([ok,name,detail])=>{const d=el("div",ok?"ok":"ng"); d.append(el("b",null,name)," ",detail); s.appendChild(d);});
+}
+
+// ---------- render: weather, moon, air ----------
+function renderWeather(w,err,oz,ozErr){
+  const t2 = s => s ? s.slice(11,16) : "–";
+  const now=Date.now();
+
+  // 3-hourly
+  const hb=$("hours"); hb.textContent="";
+  if(w && w.hourly){
+    const h=w.hourly; const nowKey = w.current ? w.current.time.slice(0,13) : jstKey(now).slice(0,13);
+    let i0 = h.time.findIndex(t=>t.slice(0,13)>nowKey); if(i0<0) i0=0;
+    while(i0<h.time.length && (+h.time[i0].slice(11,13))%3!==0) i0++;
+    for(let k=0;k<8 && i0+k*3<h.time.length;k++){
+      const i=i0+k*3, hh=+h.time[i].slice(11,13); const cell=el("div","hr");
+      cell.appendChild(el("div","t",(hh===0? `${+h.time[i].slice(8,10)}日 `:"")+`${hh}時`));
+      cell.appendChild(icon(wxKind(h.weather_code[i])));
+      cell.appendChild(el("div","w",wxShort(h.weather_code[i])));
+      cell.appendChild(el("div","tp",h.temperature_2m[i]==null?"–":Math.round(h.temperature_2m[i])+"℃"));
+      if(h.apparent_temperature?.[i]!=null) cell.appendChild(el("div","h",`体感${Math.round(h.apparent_temperature[i])}℃`));
+      cell.appendChild(el("div","h",`湿度${h.relative_humidity_2m[i]==null?"–":Math.round(h.relative_humidity_2m[i])}%`));
+      if(h.wind_speed_10m?.[i]!=null) cell.appendChild(el("div","h",`風${Math.round(h.wind_speed_10m[i])}m/s`));
+      cell.appendChild(el("div","h",`雨${h.precipitation_probability?.[i]??"–"}%`));
+      hb.appendChild(cell);
+    }
+  } else hb.textContent = err? `取れなかったよ(${err})` : "–";
+
+  // today / tomorrow
+  const box=$("days"); box.textContent="";
+  const daily = w && w.daily; const labels=["今日","あした"];
+  for(let i=0;i<2;i++){
+    const d=el("div","card day"); d.style.setProperty("--tag", i?"var(--lav)":"var(--pink)");
+    if(daily && daily.time && daily.time[i]){
+      const [,m,dd]=daily.time[i].split("-");
+      d.appendChild(el("div","dl",`${labels[i]} ${+m}/${+dd}`));
+      const wx=el("div","wx"); wx.append(icon(wxKind(daily.weather_code?.[i])), wxShort(daily.weather_code?.[i])); d.appendChild(wx);
+      const hi=daily.temperature_2m_max?.[i], lo=daily.temperature_2m_min?.[i];
+      const tp=el("div","tp"); tp.append(el("span","hi",hi==null?"–":Math.round(hi)+"℃")," / ",el("span","lo",lo==null?"–":Math.round(lo)+"℃")); d.appendChild(tp);
+      let hmin=null,hmax=null;
+      if(w.hourly){ w.hourly.time.forEach((t,j)=>{ if(t.startsWith(daily.time[i])){ const v=w.hourly.relative_humidity_2m[j]; if(v!=null){hmin=hmin==null?v:Math.min(hmin,v); hmax=hmax==null?v:Math.max(hmax,v);} } }); }
+      const uv=daily.uv_index_max?.[i];
+      const dl=document.createElement("dl");
+      [["雨の確率", daily.precipitation_probability_max?.[i]==null?"–":daily.precipitation_probability_max[i]+"%"],
+       ["湿度", hmin==null?"–":`${Math.round(hmin)}〜${Math.round(hmax)}%`],
+       ["紫外線", uv==null?"–":`${Math.round(uv)} ${uvLabel(uv)}`],
+       ["日の出", t2(daily.sunrise?.[i])],
+       ["日の入り", t2(daily.sunset?.[i])],
+       ["風(最大)", daily.wind_speed_10m_max?.[i]==null?"–":`${Math.round(daily.wind_speed_10m_max[i])} m/s ${windWord(daily.wind_speed_10m_max[i])}`],
+       ...((c=>c? [["記録で補正", `${Math.round(c.max)}℃ / ${Math.round(c.min)}℃${c.partial?"(これから)":""}`]] : [])(i===0?lastCorr?.today:lastCorr?.tomorrow))]
+       .forEach(([k,v])=>dl.append(el("dt",null,k),el("dd",null,v)));
+      d.appendChild(dl);
+    } else { d.appendChild(el("div","dl",labels[i])); d.appendChild(el("div","tip", err? `取れなかったよ(${err})` : "–")); }
+    box.appendChild(d);
+  }
+
+  renderMoon(w,now);
+
+  renderAir(oz,ozErr,w,now);
+}
+
+// ---------- air quality ----------
+const AQ_LV=[["きれい","var(--ok)"],["ふつう","var(--sky)"],["ちょっと注意","var(--butter)"],["注意","var(--warn)"],["外出はひかえめに","var(--bad)"]];
+const AQ_ITEMS=[ // thresholds (hourly, µg/m³ unless noted) for levels 1..4
+  {key:"pm2_5", name:"PM2.5", sub:"とても小さな粒", unit:"µg/m³", th:[15,35,50,70], max:100},
+  {key:"dust", name:"黄砂", sub:"大陸から飛ぶ砂", unit:"µg/m³", th:[20,50,100,200], max:250},
+  {key:"ozone", name:"光化学スモッグ", sub:"オキシダント", unit:"ppm", conv:v=>v/1960, th:[0.04,0.06,0.10,0.12], max:0.16, dp:3},
+  {key:"pm10", name:"PM10", sub:"ほこり・粒子", unit:"µg/m³", th:[50,100,150,200], max:250},
+  {key:"nitrogen_dioxide", name:"二酸化窒素", sub:"車の排気ガスなど", unit:"ppm", conv:v=>v/1880, th:[0.02,0.04,0.06,0.10], max:0.12, dp:3},
+];
+function aqLevel(item,v,sens){ if(v==null) return null; const f=sens?0.75:1; let lv=0; item.th.forEach(t=>{ if(v>=t*f) lv++; }); return lv; }
+function renderAir(oz,err,w,now){
+  const lead=$("aqLead"), sub=$("aqSub"), items=$("aqItems"), strip=$("aqStrip"), cap=$("aqCap"), adv=$("aqAdvice");
+  lead.className="lead"; items.textContent=""; strip.textContent=""; cap.textContent=""; adv.textContent=""; sub.textContent="";
+  if(!oz?.time){ lead.textContent = err? `空気のデータが取れなかったよ(${err})` : "–"; return; }
+  const sens=$("aqSens").checked;
+  const nowKey=jstKey(now).slice(0,13); let i0=oz.time.findIndex(t=>t.slice(0,13)===nowKey); if(i0<0) i0=0;
+  const i1=Math.min(oz.time.length-1,i0+23);
+  const val=(it,i)=>{ const v=oz[it.key]?.[i]; return v==null?null:(it.conv?it.conv(v):v); };
+  // per-hour overall level
+  const hours=[]; for(let i=i0;i<=i1;i++){ let lv=null, by=null; AQ_ITEMS.forEach(it=>{ const l=aqLevel(it,val(it,i),sens); if(l!=null&&(lv==null||l>lv)){lv=l;by=it;} }); hours.push({t:oz.time[i],lv,by}); }
+  const nowH=hours[0]; const peak=hours.reduce((a,h)=>(h.lv??-1)>(a.lv??-1)?h:a,hours[0]);
+  const lvTxt=AQ_LV[peak.lv??0];
+  const leadMap=["今日の空気はきれい","空気はふつう","空気がちょっと汚れ気味","空気が汚れているよ","空気がとても汚れているよ"];
+  lead.textContent=leadMap[peak.lv??0]; lead.classList.add((peak.lv??0)>=3?"bad":(peak.lv??0)>=2?"warn":"ok");
+  if((peak.lv??0)>=1 && peak.by) sub.textContent=`いちばん気になるのは ${peak.by.name}(${whenLabel(peak.t)})・いま「${AQ_LV[nowH.lv??0][0]}」`;
+  else sub.textContent="この先24時間、気になる汚れはなさそう";
+  // items
+  AQ_ITEMS.forEach(it=>{
+    const vn=val(it,i0); let pk=null, pt=null; for(let i=i0;i<=i1;i++){ const v=val(it,i); if(v!=null&&(pk==null||v>pk)){pk=v;pt=oz.time[i];} }
+    if(vn==null && pk==null) return;
+    const lv=aqLevel(it,pk,sens);
+    const row=el("div","aq"); const nm=el("div","nm",it.name); nm.appendChild(el("small",null,it.sub)); row.appendChild(nm);
+    const vals=el("div","vals"); const f=v=>v==null?"–":(it.dp?v.toFixed(it.dp):Math.round(v));
+    vals.append(`いま ${f(vn)}`, el("span",null,`・最大 ${f(pk)} ${it.unit}`));
+    const chip=el("span","lvchip",AQ_LV[lv??0][0]); chip.style.background=AQ_LV[lv??0][1]; if((lv??0)===1||(lv??0)===2) chip.style.color="#4a3550"; vals.appendChild(chip);
+    row.appendChild(vals);
+    const m=el("div","meter"); const bar=document.createElement("i"); bar.style.width=Math.min(100,(pk??0)/it.max*100)+"%"; bar.style.background=AQ_LV[lv??0][1]; m.appendChild(bar); row.appendChild(m);
+    items.appendChild(row);
+  });
+  // 24h strip
+  hours.forEach(h=>{ const i=document.createElement("i"); i.style.background=h.lv==null?"var(--line)":AQ_LV[h.lv][1]; i.title=`${+h.t.slice(11,13)}時 ${h.lv==null?"–":AQ_LV[h.lv][0]}${h.by?`(${h.by.name})`:""}`; strip.appendChild(i); });
+  const c1=hours[0]?.t, c2=hours[12]?.t, c3=hours[hours.length-1]?.t;
+  [c1,c2,c3].forEach(t=>cap.appendChild(el("span",null,t?`${+t.slice(11,13)}時`:"")));
+  // advice
+  const lvOf=k=>{ const it=AQ_ITEMS.find(x=>x.key===k); let m=null; for(let i=i0;i<=i1;i++){ const l=aqLevel(it,val(it,i),sens); if(l!=null&&(m==null||l>m)) m=l; } return m??0; };
+  const pm=lvOf("pm2_5"), du=lvOf("dust"), ox=lvOf("ozone"), pl=peak.lv??0;
+  const tips=[];
+  if(pl>=4) tips.push([10,"不要不急の外出はひかえて、窓を閉めて過ごそう"]);
+  if(pm>=2) tips.push([9,"外ではマスクを。PM2.5には、すき間なくつけた不織布マスクや高性能マスク(N95・DS2など)が効果的"]);
+  if(du>=2) tips.push([8,"黄砂が多め。マスクとメガネをして、洗濯物や布団は部屋干しに"]);
+  if(ox>=2) tips.push([8,"昼すぎから夕方は光化学スモッグに注意。外での激しい運動はひかえめに"]);
+  if(pl>=3) tips.push([7,"窓を閉めて、空気清浄機があれば使おう。外出は短めに"]);
+  if(pl>=2) tips.push([6,"帰ったら、手洗い・うがい・洗顔で粒を落とそう"]);
+  const hum=w?.current?.relative_humidity_2m, tc=w?.current?.temperature_2m, d=w?.daily;
+  if(hum!=null && hum<40) tips.push([5,"空気が乾燥しているよ。マスクでのどをうるおし、部屋は加湿しよう"]);
+  if(tc!=null && tc<=8) tips.push([5,"冷たい空気は咳のもと。マスクで口元をあたためよう"]);
+  if(d?.temperature_2m_max?.[0]!=null && d.temperature_2m_max[0]-d.temperature_2m_min[0]>=10) tips.push([4,"寒暖差が大きい日。咳が出やすいので、羽織るものを持って行こう"]);
+  if(sens && pl>=2) tips.push([3,"お医者さんから処方されているお薬があれば、持ち歩くと安心"]);
+  if(!tips.length) tips.push([1, pl<=0 ? "空気はきれい。窓を開けて換気するチャンス" : "ふだんどおりで大丈夫。気になる人はマスクを"]);
+  tips.sort((a,b)=>b[0]-a[0]).slice(0,4).forEach(([,t])=>adv.appendChild(el("li",null,t)));
+  // reflect in the "now" card
+  if(pl>=2){ const nl=$("nowLine"); if(nl && !nl.querySelector(".aqpill")){ const p=el("span","pill aqpill",`空気: ${AQ_LV[pl][0]}`); nl.appendChild(p); }
+    const nt=$("nowTip"); if(nt && pm+du>=2 && !nt.textContent.includes("マスク")) nt.textContent = (nt.textContent?nt.textContent+"。":"") + "空気が汚れ気味。外ではマスクをしよう"; }
+}
+
+function renderMoon(w,now){
+  const {lat,lon}=place;
+  const mp=ASTRO.moonPos(now,lat,lon), sp=ASTRO.sunPos(now,lat,lon), ill=ASTRO.illumination(now);
+  const cloud = w && w.current && w.current.cloud_cover!=null ? w.current.cloud_cover : cloudAt(w,now);
+  const vis=moonVisibility(mp,sp,ill,cloud);
+
+  // sky map: map orientation (north up, east right); center = straight up, edge = horizon
+  const R=70, map=$("skymap"); map.textContent="";
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox","-85 -85 170 170"); svg.setAttribute("class","skymap");
+  svg.setAttribute("role","img"); svg.setAttribute("aria-label",`月は${dirName(mp.az)}の方角、高さ${Math.round(mp.alt)}度`);
+  const skyFill = sp.alt>0 ? "var(--panel2)" : "var(--night)";
+  const lblCol = sp.alt>0 ? "var(--muted)" : "#d9d3f0";
+  let inner = `<circle r="${R}" fill="${skyFill}" stroke="var(--line)" stroke-width="2"/>`+
+    `<circle r="${R*2/3}" fill="none" stroke="${lblCol}" stroke-opacity=".3" stroke-dasharray="3 4"/>`+
+    `<circle r="${R/3}" fill="none" stroke="${lblCol}" stroke-opacity=".3" stroke-dasharray="3 4"/>`+
+    `<text x="0" y="${-R+12}" text-anchor="middle" font-size="10" fill="${lblCol}">北</text>`+
+    `<text x="${R-9}" y="4" text-anchor="middle" font-size="10" fill="${lblCol}">東</text>`+
+    `<text x="0" y="${R-5}" text-anchor="middle" font-size="10" fill="${lblCol}">南</text>`+
+    `<text x="${-R+9}" y="4" text-anchor="middle" font-size="10" fill="${lblCol}">西</text>`+
+    `<text x="${R/3+2}" y="-3" font-size="7" fill="${lblCol}" fill-opacity=".7">60°</text>`+
+    `<text x="${R*2/3+2}" y="-3" font-size="7" fill="${lblCol}" fill-opacity=".7">30°</text>`;
+  if(sp.alt<=0){ for(let i=0;i<14;i++){ const a=(i*137.5)%360*Math.PI/180, rr=(i*29)%62+4; inner+=`<circle cx="${(rr*Math.cos(a)).toFixed(1)}" cy="${(rr*Math.sin(a)).toFixed(1)}" r="${i%3?0.8:1.2}" fill="#fff" fill-opacity=".7"/>`; } }
+  svg.innerHTML=inner;
+  const place2 = (alt,az) => { const r=R*(1-Math.max(0,alt)/90); const a=az*Math.PI/180; return [r*Math.sin(a), -r*Math.cos(a)]; };
+  if(sp.alt>0){ const [x,y]=place2(sp.alt,sp.az); const c=document.createElementNS(NS,"circle"); c.setAttribute("cx",x); c.setAttribute("cy",y); c.setAttribute("r",6); c.setAttribute("fill","var(--sun)"); svg.appendChild(c); }
+  const [mx,my]=place2(mp.alt,mp.az);
+  const mg=moonSVG(ill.phase,ill.fraction,9); mg.setAttribute("transform",`translate(${mx.toFixed(1)},${my.toFixed(1)})`);
+  if(mp.alt<=0) mg.setAttribute("opacity",".35");
+  const glow=document.createElementNS(NS,"circle"); glow.setAttribute("cx",mx); glow.setAttribute("cy",my); glow.setAttribute("r",14); glow.setAttribute("fill","var(--moonlit)"); glow.setAttribute("opacity",mp.alt>0?".25":"0");
+  svg.appendChild(glow); svg.appendChild(mg);
+  map.appendChild(svg);
+
+  // info
+  const box=$("moon"); box.textContent="";
+  const head=el("div","mhead"); head.appendChild(moonIcon(ill.phase,ill.fraction));
+  const hn=el("div"); hn.appendChild(el("div","mname",moonName(ill.phase))); hn.appendChild(el("div","tip",`月齢 ${(ill.phase*29.53).toFixed(1)}・光っている部分 ${Math.round(ill.fraction*100)}%`));
+  head.appendChild(hn); box.appendChild(head);
+  box.appendChild(el("div","mstate "+vis.cls,vis.text));
+
+  const t0=jstMidnight(now); const mt=ASTRO.moonTimes(t0,lat,lon);
+  const fist = Math.max(0,Math.round(mp.alt/10));
+  const rows=[
+    ["方角", `${dirName(mp.az)}(${Math.round(mp.az)}°)`],
+    ["高さ", mp.alt<=0 ? `地平線の下(${Math.round(mp.alt)}°)` : `${Math.round(mp.alt)}° ${altWord(mp.alt)}${fist?`・腕をのばしたげんこつ約${fist}個分`:""}`],
+    ["雲の量", cloud==null?"–":`${Math.round(cloud)}%`],
+    ["今日の月の出", mt.rise?hm(mt.rise):"なし"],
+    ["今日の月の入り", mt.set?hm(mt.set):"なし"],
+  ];
+  if(vis.cls!=="good"){
+    const nx=nextGoodMoon(now,lat,lon);
+    if(nx){
+      const c2=cloudAt(w,nx.t);
+      rows.push(["次に見やすいとき", `${hm(new Date(nx.t))}ごろ ${dirName(nx.az)}の空・高さ${Math.round(nx.alt)}°`+(c2!=null?`(雲${Math.round(c2)}%の予報)`:"")]);
+    } else rows.push(["次に見やすいとき","24時間以内は、暗い空で高く上る時間がないよ"]);
+  }
+  const dl=document.createElement("dl"); rows.forEach(([k,v])=>dl.append(el("dt",null,k),el("dd",null,v))); box.appendChild(dl);
+  renderMoonChart(now,lat,lon);
+}
+
+// altitude of the moon over the next 24 hours
+function renderMoonChart(now,lat,lon){
+  const W=340,H=170,L=30,Rt=8,T=10,B=24, pw=W-L-Rt, ph=H-T-B;
+  const t0=now, span=24*3600e3, ymin=-30, ymax=90;
+  const X=t=>L+(t-t0)/span*pw, Y=a=>T+(ymax-Math.max(ymin,Math.min(ymax,a)))/(ymax-ymin)*ph;
+  let g="";
+  // night shading
+  let darkStart=null;
+  for(let m=0;m<=24*60;m+=10){
+    const t=t0+m*MIN, dark=ASTRO.sunPos(t,lat,lon).alt<-6;
+    if(dark&&darkStart==null) darkStart=t;
+    if((!dark||m===24*60)&&darkStart!=null){ g+=`<rect x="${X(darkStart).toFixed(1)}" y="${T}" width="${(X(t)-X(darkStart)).toFixed(1)}" height="${ph}" fill="var(--night)" opacity=".18"/>`; darkStart=null; }
+  }
+  // grid
+  [0,30,60,90].forEach(a=>{ g+=`<line x1="${L}" x2="${W-Rt}" y1="${Y(a)}" y2="${Y(a)}" stroke="var(--line)" ${a===0?'stroke-width="2"':'stroke-dasharray="3 4"'}/>`+
+    `<text x="${L-4}" y="${Y(a)+3}" text-anchor="end" font-size="9" fill="var(--muted)">${a}°</text>`; });
+  g+=`<text x="${W-Rt-2}" y="${Y(0)-4}" text-anchor="end" font-size="9" fill="var(--muted)">地平線</text>`;
+  // hour ticks every 3h (JST)
+  const p0=jstParts(t0); let first=t0+((3-(p0.h%3))*60-p0.mi)*MIN; if(first-t0<30*MIN) first+=3*3600e3;
+  for(let t=first;t<t0+span;t+=3*3600e3){ const h=jstParts(t).h; g+=`<text x="${X(t).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="9" fill="var(--muted)">${h}時</text>`; }
+  // moon curve
+  let pts=[], best=null;
+  for(let m=0;m<=24*60;m+=10){ const t=t0+m*MIN, p=ASTRO.moonPos(t,lat,lon); pts.push([X(t),Y(p.alt),p.alt]); if(!best||p.alt>best.alt) best={t,...p}; }
+  const above=pts.map(([x,y,a])=>`${x.toFixed(1)},${(a>0?y:Y(0)).toFixed(1)}`).join(" ");
+  g+=`<polygon points="${L},${Y(0)} ${above} ${W-Rt},${Y(0)}" fill="var(--moonlit)" opacity=".35"/>`;
+  g+=`<polyline points="${pts.map(([x,y])=>x.toFixed(1)+","+y.toFixed(1)).join(" ")}" fill="none" stroke="var(--lav)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  // now marker
+  const pn=ASTRO.moonPos(now,lat,lon);
+  g+=`<circle cx="${X(now)}" cy="${Y(pn.alt)}" r="5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/>`+
+     `<text x="${X(now)+8}" y="${Y(pn.alt)-6}" font-size="10" font-weight="700" fill="var(--accent)">いま</text>`;
+  if(best.alt>0){ g+=`<circle cx="${X(best.t)}" cy="${Y(best.alt)}" r="3.5" fill="var(--lav)"/>`; }
+  const box=$("moonChart"); box.textContent="";
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("role","img");
+  svg.setAttribute("aria-label","これから24時間の月の高さのグラフ"); svg.innerHTML=g; box.appendChild(svg);
+  box.appendChild(el("div","cap", best.alt>0
+    ? `これから24時間の月の高さ。いちばん高くなるのは ${hm(new Date(best.t))}ごろ、${dirName(best.az)}の空で${Math.round(best.alt)}°。かげになっている部分は空が暗い時間です`
+    : "これから24時間、月は地平線の上にのぼりません"));
+}
+
+function renderTopics(w,now){
+  const {lat,lon}=place;
+  const today=jstDateStr(now); const jp=jstParts(now);
+  const evs=eventsOfMonth(jp.y,jp.m);
+  const todays=evs.filter(e=>e.date===today && !e.minor);
+  const ill=ASTRO.illumination(now);
+
+  // announcement
+  const an=$("announce"); an.textContent="";
+  const upcoming=evs.filter(e=>e.date>today && e.big);
+  if(todays.length){
+    const e=todays.find(x=>x.big)||todays[0];
+    an.append(el("div","tag","今日のお空"), el("div","ttl",`今日は${e.title}!`), el("div","nt",e.note + (e.kind==="meteor"?`(${moonLightOn(today)})`:"")));
+    an.hidden=false;
+  } else if(upcoming.length){
+    const e=upcoming[0]; const [,m,d]=e.date.split("-");
+    an.append(el("div","tag",`${+m}月のお空のイベント`), el("div","ttl",`${+d}日 ${e.title}`), el("div","nt",e.note));
+    an.hidden=false;
+  } else an.hidden=true;
+
+  // today topics
+  const ul=$("todayTopics"); ul.textContent="";
+  todays.forEach(e=>ul.appendChild(topicLi(KIND[e.kind][1],KIND[e.kind][0].slice(0,1),e.title,e.note)));
+  const t0=jstMidnight(now); const st=sunTimes(t0,lat,lon), sy=sunTimes(t0-864e5,lat,lon);
+  if(st.len){
+    const hh=Math.floor(st.len/3600e3), mm=Math.round(st.len%3600e3/MIN);
+    const diff = sy.len ? Math.round((st.len-sy.len)/MIN) : 0;
+    ul.appendChild(topicLi("var(--sun)","日",`昼の長さ ${hh}時間${mm}分`,
+      `日の出 ${hm(new Date(st.rise))}・日の入り ${hm(new Date(st.set))}。きのうより${diff===0?"ほぼ同じ":Math.abs(diff)+"分"+(diff<0?"短い":"長い")}`));
+  }
+  // next full/new moon
+  let nextFull=null,nextNew=null;
+  for(let k=0;k<2;k++){ const y=jp.m+k>12?jp.y+1:jp.y, m=(jp.m+k-1)%12+1;
+    moonPhaseEvents(y,m).forEach(e=>{ if(e.t>now){ if(e.name==="満月"&&!nextFull) nextFull=e; if(e.name==="新月"&&!nextNew) nextNew=e; } }); }
+  const days = e => Math.round((jstMidnight(e.t)-t0)/864e5);
+  const mlines=[];
+  if(nextFull) mlines.push(days(nextFull)===0?"今日は満月!":`満月まであと${days(nextFull)}日`);
+  if(nextNew) mlines.push(days(nextNew)===0?"今日は新月":`新月まであと${days(nextNew)}日`);
+  ul.appendChild(topicLi("var(--butter)","月",`${moonName(ill.phase)}(月齢${(ill.phase*29.53).toFixed(1)})`, mlines.join("・")));
+  const uvMax=w?.daily?.uv_index_max?.[0];
+  if(uvMax!=null) ul.appendChild(topicLi("var(--pink)","紫",`紫外線は最大${Math.round(uvMax)}(${uvLabel(uvMax)})`, uvMax>=6?"日焼け止めと帽子を忘れずに":uvMax>=3?"長く外にいるなら帽子を":"日焼けの心配は少なめ"));
+
+  // night topics
+  const nl=$("nightTopics"); nl.textContent="";
+  const fr=ill.fraction;
+  nl.appendChild(topicLi("var(--night)","星", fr<0.25?"今夜は月明かりが少なくて星日和":fr<0.75?"月明かりはほどほど":"明るい月夜。暗い星は見えにくいかも",
+    fr<0.25?"暗い場所なら、ふだんより多くの星が見えるよ":"明るい星や惑星を探すのがおすすめ"));
+  const pt=planetsTonight(now,lat,lon);
+  if(pt.list.length){
+    pt.list.sort((a,b)=>a.shown-b.shown).forEach(p=>{
+      nl.appendChild(topicLi("var(--sky)",p.name.slice(0,1), `${p.name}${p.nick?`(${p.nick})`:""}が見える`,
+        `${p.when}。${hm(new Date(p.best.t))}ごろ ${dirName(p.best.az)}の空・高さ${Math.round(p.best.alt)}°。${p.bright}`));
+    });
+  } else nl.appendChild(topicLi("var(--sky)","惑","今夜は見やすい惑星がなさそう",""));
+  nl.appendChild(topicLi("var(--lav)","座",`${jp.m}月の星座`,CONSTELLATION[jp.m]));
+  // meteor shower within 10 days
+  const soon=[...evs, ...eventsOfMonth(jp.m===12?jp.y+1:jp.y, jp.m===12?1:jp.m+1)]
+    .filter(e=>e.kind==="meteor" && e.date>=today && (Date.parse(e.date)-Date.parse(today))/864e5<=10);
+  soon.slice(0,1).forEach(e=>{ const [,m,d]=e.date.split("-");
+    nl.appendChild(topicLi("var(--accent)","流",`${+m}/${+d} ${e.title}`,`${e.note? e.note.replace(/。?$/,"。") : ""}${moonLightOn(e.date)}。`)); });
+
+  // calendar
+  $("calTitle").textContent=`${jp.m}月のお空カレンダー`;
+  const cal=$("cal"); cal.textContent="";
+  evs.filter(e=>!e.minor || e.title==="上弦の月" || e.title==="下弦の月").forEach(e=>{
+    const li=el("li"); if(e.date===today) li.classList.add("today"); else if(e.date<today) li.classList.add("past");
+    const [,m,d]=e.date.split("-");
+    const ev=el("div","ev"); const k=el("span","kind",KIND[e.kind][0]); k.style.background=KIND[e.kind][1];
+    ev.append(k, " ", el("b",null,e.title));
+    let note=e.note; if(e.kind==="meteor" && e.date>=today) note=(note? note.replace(/。?$/,"。") : "")+moonLightOn(e.date)+"。";
+    if(note) ev.append(el("small",null,note));
+    li.append(el("div","dd",`${+d}日`),ev); cal.appendChild(li);
+  });
+}
+
+// ---------- state & flow ----------
+let place = DEFAULT_PLACE;
+let running = 0;
+let lastWeather = null, lastUp = null, lastBike = null, lastAir = null;
+function loadList(k){ try{ const v=JSON.parse(load(k)||"[]"); return Array.isArray(v)?v.filter(x=>x&&isFinite(x.lat)&&isFinite(x.lon)&&x.name):[]; }catch(e){ return []; } }
+const samePlace=(a,b)=>a&&b&&Math.abs(a.lat-b.lat)<0.005&&Math.abs(a.lon-b.lon)<0.005;
+let favs=loadList("ab-favs").slice(0,3), hist=loadList("ab-hist").slice(0,10);
+let favMsg="";
+function renderFavs(){
+  const box=$("favs"); box.textContent="";
+  favs.forEach((f,i)=>{
+    const w=el("span","fav"+(samePlace(f,place)?" on":""));
+    const b=el("button",null,f.name); b.type="button"; b.addEventListener("click",()=>{ $("cands").textContent=""; setPlace(f); });
+    const x=el("button","x","×"); x.type="button"; x.setAttribute("aria-label",`${f.name}をお気に入りから外す`);
+    x.addEventListener("click",()=>{ favs.splice(i,1); store("ab-favs",JSON.stringify(favs)); favMsg=""; renderFavs(); });
+    w.append(b,x); box.appendChild(w);
+  });
+  if(!favs.some(f=>samePlace(f,place))){
+    const add=el("button","addfav","＋ お気に入りに登録"); add.type="button";
+    add.addEventListener("click",()=>{
+      if(favs.length>=3){ favMsg="登録は3つまで。どれかを × で外してね"; renderFavs(); return; }
+      favs.push({name:place.name,lat:place.lat,lon:place.lon}); store("ab-favs",JSON.stringify(favs)); favMsg=""; renderFavs();
+    });
+    box.appendChild(add);
+  }
+  if(favMsg) box.appendChild(el("span","favmsg",favMsg));
+}
+function renderHist(){
+  const box=$("hist"); box.textContent="";
+  $("histBox").hidden = !hist.length;
+  hist.forEach(h=>{ const b=el("button",null,h.name); b.type="button"; b.addEventListener("click",()=>{ $("cands").textContent=""; setPlace(h); }); box.appendChild(b); });
+  if(hist.length){ const c=el("button","clear","履歴を消す"); c.type="button"; c.addEventListener("click",()=>{ hist=[]; store("ab-hist","[]"); renderHist(); }); box.appendChild(c); }
+}
+function setPlace(p){
+  place = p; $("lat").value=p.lat.toFixed(4); $("lon").value=p.lon.toFixed(4);
+  store("ab-place", JSON.stringify(p));
+  hist = [ {name:p.name,lat:p.lat,lon:p.lon}, ...hist.filter(h=>!samePlace(h,p)) ].slice(0,10);
+  store("ab-hist", JSON.stringify(hist));
+  favMsg=""; renderFavs(); renderHist();
+  const pl=$("place"); pl.textContent=""; pl.append(el("b",null,p.name)," のお天気");
+  run();
+}
+
+async function run(){
+  const my = ++running;
+  const {lat,lon} = place;
+  $("verdict").textContent="お空を見ています…"; $("vmeta").textContent="";
+  renderMoon(lastWeather,Date.now());
+  renderTopics(lastWeather,Date.now());
+  const start=Math.floor(Date.now()/(STEP*MIN))*STEP*MIN;
+  const yid=$("yid").value.trim(); store("ab-yid",yid);
+  // slower, independent sources: started now, rendered when they arrive
+  const areaP = jmaAreaFor(lat,lon);
+  const offP = areaP.then(a=>Promise.allSettled([fetchOfficial(a), fetchWarnings(a)]));
+  const ensP = fetchEnsemble(lat,lon);
+  [areaP,offP,ensP].forEach(pr=>pr.catch(()=>{})); // handled later; avoid "unhandled rejection" while the main fetch runs
+
+  const [nr,yr,wr,or,ar,tr,gr,ur,...mr] = await Promise.allSettled([
+    fetchNowcast(lat,lon),
+    yid? fetchYahoo(lat,lon,yid) : Promise.reject(new Error("Client ID未入力。下の欄に入れると使えます")),
+    fetchWeather(lat,lon),
+    fetchOzone(lat,lon),
+    fetchAmedas(lat,lon),
+    fetchThunder(lat,lon),
+    fetchWindGrid(lat,lon),
+    fetchUpper(lat,lon),
+    ...MODELS.map(md=>fetchModel(md,lat,lon,start))
+  ]);
+  if(my!==running) return;
+
+  const nc = nr.status==="fulfilled" ? nr.value : null;
+  const yh = yr.status==="fulfilled" && yr.value.pts.length ? yr.value : null;
+  const w = wr.status==="fulfilled" ? wr.value : null; lastWeather=w;
+  const models={}; const src=[];
+  src.push(nc? [true,"気象庁 高解像度降水ナウキャスト",`${hm(new Date(nc.basetime))} 観測 + 1時間先まで`]
+             : [false,"気象庁 高解像度降水ナウキャスト",`取得できませんでした(${nr.reason?.message||"データなし"})`]);
+  src.push(yh? [true,"Yahoo! 気象情報API","5分間隔・1時間先まで"]
+             : [false,"Yahoo! 気象情報API",`取得できませんでした(${yr.reason?.message||"データなし"})`]);
+  MODELS.forEach((md,i)=>{
+    const r=mr[i];
+    if(r.status==="fulfilled"){ models[md.key]=r.value; src.push([true,md.label,`Open-Meteo 経由・${r.value.kind}`]); }
+    else src.push([false,md.label,`取得できませんでした(${r.reason?.message||"不明"})`]);
+  });
+  src.push(w? [true,"天気・湿度・紫外線・雲","Open-Meteo"] : [false,"天気・湿度・紫外線・雲",`取得できませんでした(${wr.reason?.message})`]);
+  src.push(or.status==="fulfilled"? [true,"空気(PM2.5・黄砂・オゾンなど)","CAMS(Open-Meteo 経由)"] : [false,"空気(PM2.5・黄砂・オゾンなど)",`取得できませんでした(${or.reason?.message})`]);
+  lastAir = or.status==="fulfilled"? or.value : null;
+  src.push(ar.status==="fulfilled"? [true,"気象庁 アメダス",`${hm(new Date(ar.value.time))} 観測`] : [false,"気象庁 アメダス",`取得できませんでした(${ar.reason?.message})`]);
+  src.push(tr.status==="fulfilled"? [true,"気象庁 雷ナウキャスト",`${hm(new Date(tr.value.basetime))} 解析 + 1時間先まで`] : [false,"気象庁 雷ナウキャスト",`取得できませんでした(${tr.reason?.message})`]);
+  src.push(ur.status==="fulfilled"? [true,"上空500hPa・気圧","Open-Meteo"+(ur.value.vort?"":"(渦度は計算できませんでした)")] : [false,"上空500hPa・気圧",`取得できませんでした(${ur.reason?.message})`]);
+  try{ srvStats=await withTimeout(fetchServerStats(),8000,"応答なし"); srvErr=null; }catch(e){ srvStats=null; srvErr=e.message; }
+  if(my!==running) return;
+  MODELS.forEach(m=>{ m._w=modelWeight(m); }); // weights tuned by this place's track record
+  lastCorr = correctedTemps(models,Date.now());
+  { const sv=srvUsable(); src.push(sv? [true,"自動記録(GitHub Actions)",`${sv.station.name} ${sv.days_recorded}日分・更新 ${hm(new Date(Date.parse(sv.updated)))}`] : [false,"自動記録(GitHub Actions)", srvStats? `${srvStats.station?.name}付近用のデータのため、この地点では使っていません` : (srvErr||"未設定")]); }
+  const rows=blend(start,models,nc,yh);
+  renderRain(rows,src,w);
+  const up = ur.status==="fulfilled"? ur.value : null; lastUp=up;
+  const an = analyzeUpper(up,Date.now());
+  renderHint(an,w); renderUpper(up,an,Date.now()); renderPressure(up,Date.now()); renderConfidence(models,Date.now());
+  lastBike={rows,nc,w,am:ar.status==="fulfilled"?ar.value:null,field:null};
+  renderBike(rows,nc,w,lastBike.am,null);
+  radarField(nc,lat,lon).then(f=>{ if(my!==running) return; lastBike.field=f; renderBike(rows,nc,w,lastBike.am,f); }).catch(()=>{});
+  renderTopics(w,Date.now());
+  renderNow(w, ar.status==="fulfilled"?ar.value:null, ar.status==="rejected"?ar.reason.message:null,
+               tr.status==="fulfilled"?tr.value:null, tr.status==="rejected"?tr.reason.message:null, rows);
+  renderFamily(w);
+  renderWindMap(gr.status==="fulfilled"?gr.value:null, gr.status==="rejected"?gr.reason.message:null, ar.status==="fulfilled"?ar.value:null);
+  renderWeather(w, wr.status==="rejected"?wr.reason.message:null,
+                or.status==="fulfilled"?or.value:null, or.status==="rejected"?or.reason.message:null);
+  // track record (device-local)
+  try{ recordForecasts(models,Date.now()); verify(ar.status==="fulfilled"?ar.value:null, rows, Date.now()); }catch(e){}
+  renderVerification();
+  renderUmbrella(rows,nc,w);
+
+  // official forecast & warnings
+  Promise.allSettled([areaP, offP]).then(([a,o])=>{
+    if(my!==running) return;
+    const area=a.status==="fulfilled"?a.value:null; lastArea=area;
+    const [of,wn]= o.status==="fulfilled"? o.value : [{status:"rejected",reason:o.reason},{status:"rejected",reason:o.reason}];
+    lastOfficial = of.status==="fulfilled"? of.value : null;
+    renderOfficial(lastOfficial, of.status==="rejected"?of.reason?.message:null, area, a.status==="rejected"?a.reason?.message:null,
+                   wn.status==="fulfilled"?wn.value:null, wn.status==="rejected"?wn.reason?.message:null);
+    const s2=$("src"); if(s2){ const add=(ok,n,d)=>{const dv=el("div",ok?"ok":"ng"); dv.append(el("b",null,n)," ",d); s2.appendChild(dv);};
+      add(of.status==="fulfilled","気象庁 府県天気予報・週間予報", of.status==="fulfilled"? (area?.c10name||"") : `取得できませんでした(${of.reason?.message||a.reason?.message})`);
+      add(wn.status==="fulfilled","気象庁 警報・注意報", wn.status==="fulfilled"? `${wn.value.list.length}件発表中` : `取得できませんでした(${wn.reason?.message||a.reason?.message})`); }
+    renderUmbrella(rows,nc,w); if(lastEns) renderEnsemble(lastEns,null);
+  });
+  ensP.then(e=>{ if(my!==running) return; lastEns=e; renderEnsemble(e,null); renderUmbrella(rows,nc,w);
+    const s2=$("src"); if(s2){ const dv=el("div","ok"); dv.append(el("b",null,"アンサンブル予報")," ",e.models.map(m=>`${m.label}(${m.id}) ${m.P.length}通り`).join("・")); s2.appendChild(dv); } })
+    .catch(err=>{ if(my!==running) return; lastEns=null; renderEnsemble(null,err.message); });
+}
+
+function showCands(list,selected){
+  const c=$("cands"); c.textContent="";
+  if(!list.length) return;
+  if(list.length>1) c.appendChild(el("span",null,"候補:"));
+  list.forEach(p=>{
+    const b=el("button",null,p.name); b.type="button";
+    b.setAttribute("aria-pressed", p===selected ? "true":"false");
+    b.addEventListener("click",()=>{ showCands(list,p); setPlace(p); });
+    c.appendChild(b);
+  });
+}
+
+$("searchForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const q=$("q").value.trim(); if(!q) return;
+  $("q").blur();
+  $("cands").textContent="さがしています…";
+  try{
+    const list=await searchPlaces(q);
+    if(!list.length){ $("cands").textContent=`「${q}」が見つからなかったよ。市区町村の名前を確かめてね`; return; }
+    showCands(list,list[0]); setPlace(list[0]);
+  }catch(err){ $("cands").textContent=err.message; }
+});
+$("geo").addEventListener("click",()=>{
+  if(!navigator.geolocation){ $("verdict").textContent="このブラウザでは現在地が使えないよ。まちの名前でさがしてね"; return; }
+  $("verdict").textContent="現在地をさがしています…";
+  navigator.geolocation.getCurrentPosition(async p=>{
+    const lat=p.coords.latitude, lon=p.coords.longitude;
+    $("cands").textContent="";
+    setPlace({name:await reverseName(lat,lon), lat, lon});
+  },()=>{ $("verdict").textContent="現在地が取れなかったよ。位置情報の許可を確かめるか、まちの名前でさがしてね"; },{timeout:10000});
+});
+$("go").addEventListener("click",()=>{
+  const lat=parseFloat($("lat").value), lon=parseFloat($("lon").value);
+  if(!isFinite(lat)||!isFinite(lon)){ $("verdict").textContent="緯度と経度を数字で入れてね"; return; }
+  $("cands").textContent=""; setPlace({name:`北緯${lat.toFixed(3)} 東経${lon.toFixed(3)}`, lat, lon});
+});
+$("yid").addEventListener("change",run);
+$("dataKey").value=load("ab-datakey")||"";
+$("dataKey").addEventListener("change",()=>{ store("ab-datakey",$("dataKey").value); run(); });
+$("aqSens").checked = load("ab-aqsens")!=="0";
+$("aqSens").addEventListener("change",()=>{ store("ab-aqsens",$("aqSens").checked?"1":"0"); if(lastAir) renderAir(lastAir,null,lastWeather,Date.now()); });
+setupFamilyForm();
+setupUmbrellaForm();
+$("commute").value = load("ab-commute") || "20";
+$("commute").addEventListener("change",()=>{ store("ab-commute",$("commute").value); if(lastBike) renderBike(lastBike.rows,lastBike.nc,lastBike.w,lastBike.am,lastBike.field); });
+
+$("yid").value=load("ab-yid")||"";
+let saved=null; try{ saved=JSON.parse(load("ab-place")||"null"); }catch(e){}
+setPlace(saved && isFinite(saved.lat) && isFinite(saved.lon) ? saved : DEFAULT_PLACE);
+setInterval(run, 5*MIN);
+setInterval(()=>renderMoon(lastWeather,Date.now()), MIN);
+})();
+</script>
+</body>
+</html>
