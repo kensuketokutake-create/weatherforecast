@@ -1,0 +1,41 @@
+name: record-weather
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # every hour at :07 UTC (avoids the busy top of the hour)
+  workflow_dispatch:       # "Run workflow" button for a manual test
+
+permissions:
+  contents: write
+
+concurrency:
+  group: record-weather
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Record forecasts and observations
+        run: node scripts/record.mjs
+        env:
+          HOME_LAT: ${{ secrets.HOME_LAT }}
+          HOME_LON: ${{ secrets.HOME_LON }}
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+
+      - name: Commit data
+        run: |
+          git config user.name "weather-recorder"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "record weather $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull --rebase --autostash
+          git push
